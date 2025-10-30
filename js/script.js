@@ -24,6 +24,9 @@ let totalResults = 0;
 let currentSearchQuery = '';
 let isLoading = false;
 
+// Placeholder para imágenes
+const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRkZGIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiPk5vIEltYWdlPC9icj5BdmFpbGFibGU8L3RleHQ+Cjwvc3ZnPg==';
+
 // Event Listeners
 searchButton.addEventListener('click', performSearch);
 searchInput.addEventListener('keypress', (e) => {
@@ -150,16 +153,14 @@ function displayOMDbResults(results) {
         const movieCard = document.createElement('div');
         movieCard.className = 'movie-card';
         
-        // CORRECCIÓN: Usar placeholder si la imagen no carga
-        const poster = item.Poster !== 'N/A' ? item.Poster : 
-                      'https://via.placeholder.com/300x450/333333/FFFFFF?text=Poster+No+Disponible';
+        const poster = item.Poster !== 'N/A' ? item.Poster : PLACEHOLDER_IMAGE;
         const title = item.Title;
         const year = item.Year;
         const type = item.Type === 'movie' ? 'Película' : 'Serie';
 
         movieCard.innerHTML = `
             <img src="${poster}" alt="${title}" class="movie-poster" 
-                 onerror="this.src='https://via.placeholder.com/300x450/333333/FFFFFF?text=Error+Al+Cargar'">
+                 onerror="this.src='${PLACEHOLDER_IMAGE}'">
             <div class="movie-info">
                 <h3 class="movie-title">${title}</h3>
                 <div class="movie-year">${year} • ${type}</div>
@@ -171,25 +172,21 @@ function displayOMDbResults(results) {
         `;
 
         movieCard.addEventListener('click', () => {
-            showMovieDetails(item.imdbID, item.Type);
+            showMovieDetails(item.imdbID, item.Type, item.Title);
         });
 
         resultsContainer.appendChild(movieCard);
     });
 }
 
-// Obtener información de streaming usando XMLHttpRequest (CORREGIDO para CORS)
-function getStreamingInfo(imdbId, type) {
+// NUEVA FUNCIÓN: Buscar por título en lugar de por ID (más confiable)
+async function searchStreamingByTitle(title, type, year = '') {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         
-        // CORRECCIÓN: Quitar withCredentials para evitar problemas de CORS
-        xhr.withCredentials = false;
-
         xhr.addEventListener('readystatechange', function () {
             if (this.readyState === this.DONE) {
-                console.log('Estado:', this.status, this.statusText);
-                console.log('Respuesta de RapidAPI:', this.responseText);
+                console.log('Estado:', this.status);
                 
                 if (this.status === 200) {
                     try {
@@ -211,10 +208,11 @@ function getStreamingInfo(imdbId, type) {
             reject(new Error('Error de conexión'));
         });
 
-        // URL corregida
-        const url = `https://streaming-availability.p.rapidapi.com/shows/${type}/${imdbId}?country=es`;
+        // Usar búsqueda por título en lugar de por ID
+        const searchTitle = encodeURIComponent(title);
+        const url = `https://${RAPID_API_HOST}/search/title?title=${searchTitle}&country=es&show_type=${type}&output_language=es`;
         
-        console.log('Solicitando información de streaming para:', imdbId, type);
+        console.log('Buscando por título:', title, type);
         console.log('URL:', url);
         
         xhr.open('GET', url);
@@ -225,12 +223,13 @@ function getStreamingInfo(imdbId, type) {
     });
 }
 
-// ALTERNATIVA: Usar fetch API que maneja mejor CORS
-async function getStreamingInfoFetch(imdbId, type) {
+// Función alternativa usando fetch
+async function searchStreamingByTitleFetch(title, type) {
     try {
-        const url = `https://streaming-availability.p.rapidapi.com/shows/${type}/${imdbId}?country=es`;
+        const searchTitle = encodeURIComponent(title);
+        const url = `https://${RAPID_API_HOST}/search/title?title=${searchTitle}&country=es&show_type=${type}&output_language=es`;
         
-        console.log('Solicitando información de streaming (fetch):', imdbId, type);
+        console.log('Buscando por título (fetch):', title, type);
         
         const response = await fetch(url, {
             method: 'GET',
@@ -258,46 +257,60 @@ function updateModalWithStreamingInfo(streamingData) {
     
     let platformsHTML = '';
     
-    if (streamingData && streamingData.streamingInfo && streamingData.streamingInfo.es) {
-        const platforms = streamingData.streamingInfo.es;
+    if (streamingData && streamingData.result && streamingData.result.length > 0) {
+        const firstResult = streamingData.result[0];
         
-        platformsHTML = `
-            <h3 class="platforms-title">🎬 Disponibilidad en Streaming (España)</h3>
-            <div class="platforms-grid">
-        `;
-        
-        Object.entries(platforms).forEach(([platform, services]) => {
-            services.forEach(service => {
-                const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
-                const typeText = service.type === 'stream' ? 'STREAM' : 
-                                service.type === 'rent' ? 'ALQUILER' : 'COMPRA';
-                const typeClass = service.type === 'stream' ? 'availability-stream' : 
-                                 service.type === 'rent' ? 'availability-rent' : 'availability-buy';
-                
-                platformsHTML += `
-                    <div class="platform-item">
-                        <div class="platform-logo">${platform.substring(0, 2).toUpperCase()}</div>
-                        <div class="platform-name">${platformName}</div>
-                        <div class="platform-type">${service.type}</div>
-                        <div class="availability-badge ${typeClass}">
-                            ${typeText}
+        if (firstResult.streamingInfo && firstResult.streamingInfo.es) {
+            const platforms = firstResult.streamingInfo.es;
+            
+            platformsHTML = `
+                <h3 class="platforms-title">🎬 Disponibilidad en Streaming (España)</h3>
+                <div class="platforms-grid">
+            `;
+            
+            Object.entries(platforms).forEach(([platform, services]) => {
+                services.forEach(service => {
+                    const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+                    const typeText = service.type === 'stream' ? 'STREAM' : 
+                                    service.type === 'rent' ? 'ALQUILER' : 'COMPRA';
+                    const typeClass = service.type === 'stream' ? 'availability-stream' : 
+                                     service.type === 'rent' ? 'availability-rent' : 'availability-buy';
+                    
+                    platformsHTML += `
+                        <div class="platform-item">
+                            <div class="platform-logo">${platform.substring(0, 2).toUpperCase()}</div>
+                            <div class="platform-name">${platformName}</div>
+                            <div class="platform-type">${service.type}</div>
+                            <div class="availability-badge ${typeClass}">
+                                ${typeText}
+                            </div>
+                            ${service.price ? `<div style="font-size: 10px; margin-top: 3px; color: #fff;">${service.price.formatted || service.price}</div>` : ''}
+                            ${service.quality ? `<div style="font-size: 9px; color: var(--gray-color);">Calidad: ${service.quality}</div>` : ''}
                         </div>
-                        ${service.price ? `<div style="font-size: 10px; margin-top: 3px; color: #fff;">${service.price.formatted || service.price}</div>` : ''}
-                        ${service.quality ? `<div style="font-size: 9px; color: var(--gray-color);">Calidad: ${service.quality}</div>` : ''}
-                    </div>
-                `;
+                    `;
+                });
             });
-        });
-        
-        platformsHTML += `</div>`;
+            
+            platformsHTML += `</div>`;
+        } else {
+            platformsHTML = `
+                <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
+                <div style="text-align: center; padding: 20px;">
+                    <p>ℹ️ Información disponible, pero no en plataformas españolas.</p>
+                    <p style="font-size: 0.9rem; color: var(--gray-color); margin-top: 10px;">
+                        Este contenido está disponible en otros países pero no en España.
+                    </p>
+                </div>
+            `;
+        }
     } else {
         platformsHTML = `
             <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
             <div style="text-align: center; padding: 20px;">
-                <p>⚠️ No disponible en plataformas de streaming en España.</p>
+                <p>🔍 No se encontró información de streaming.</p>
                 <p style="font-size: 0.9rem; color: var(--gray-color); margin-top: 10px;">
-                    Esta película/serie no está disponible en las principales plataformas de streaming en España,
-                    o la información no está disponible en este momento.
+                    Esta película/serie no está disponible en las principales plataformas de streaming,
+                    o la información no está disponible en la base de datos.
                 </p>
             </div>
         `;
@@ -321,7 +334,7 @@ function updateModalWithStreamingInfo(streamingData) {
 }
 
 // Mostrar detalles de película/serie
-async function showMovieDetails(imdbID, type) {
+async function showMovieDetails(imdbID, type, title = '') {
     detailContainer.innerHTML = '<div class="loading">Cargando detalles...</div>';
     movieModal.style.display = 'block';
 
@@ -334,12 +347,15 @@ async function showMovieDetails(imdbID, type) {
         if (details.Response === 'True') {
             displayMovieDetails(details, type);
             
-            // Intentar cargar información de streaming (usar fetch como alternativa)
+            // Intentar cargar información de streaming por TÍTULO (más confiable)
             try {
-                console.log('Obteniendo información de streaming para:', imdbID, type);
+                console.log('Buscando información de streaming para:', details.Title, type);
                 
-                // Probar primero con fetch (mejor manejo de CORS)
-                const streamingData = await getStreamingInfoFetch(imdbID, type);
+                // Usar el título de la película/serie para buscar
+                const searchTitle = details.Title;
+                
+                // Probar primero con fetch
+                const streamingData = await searchStreamingByTitleFetch(searchTitle, type);
                 updateModalWithStreamingInfo(streamingData);
                 
             } catch (streamingError) {
@@ -347,7 +363,8 @@ async function showMovieDetails(imdbID, type) {
                 
                 // Fallback a XMLHttpRequest
                 try {
-                    const streamingData = await getStreamingInfo(imdbID, type);
+                    const searchTitle = details.Title;
+                    const streamingData = await searchStreamingByTitle(searchTitle, type);
                     updateModalWithStreamingInfo(streamingData);
                 } catch (xhrError) {
                     console.error('Error también con XMLHttpRequest:', xhrError);
@@ -368,16 +385,19 @@ function showStreamingError() {
     const platformsSection = document.querySelector('.platforms-section');
     const errorHTML = `
         <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
-        <div class="error" style="padding: 20px; text-align: center;">
-            <p>❌ No se pudo cargar la información de plataformas</p>
-            <p style="font-size: 0.9rem; margin-top: 10px;">
+        <div style="text-align: center; padding: 20px; background: #333; border-radius: 8px;">
+            <p style="color: #e50914; font-weight: bold;">❌ No se pudo cargar la información</p>
+            <p style="font-size: 0.9rem; margin-top: 10px; color: #ccc;">
                 Posibles causas:
             </p>
-            <ul style="text-align: left; font-size: 0.8rem; color: var(--gray-color); margin-top: 10px;">
-                <li>Problema de conexión a internet</li>
-                <li>La API de streaming no tiene información para este contenido</li>
-                <li>Límite de solicitudes alcanzado en RapidAPI</li>
+            <ul style="text-align: left; font-size: 0.8rem; color: #999; margin-top: 10px; padding-left: 20px;">
+                <li>El contenido no está en la base de datos de streaming</li>
+                <li>Problema temporal con el servicio</li>
+                <li>Límite de solicitudes alcanzado</li>
             </ul>
+            <p style="font-size: 0.8rem; color: #999; margin-top: 15px;">
+                💡 <strong>Solución:</strong> Intenta con películas más populares o recientes.
+            </p>
         </div>
     `;
     
@@ -396,8 +416,7 @@ function showStreamingError() {
 
 // Mostrar detalles de película/serie en el modal
 function displayMovieDetails(details, type) {
-    const poster = details.Poster !== 'N/A' ? details.Poster : 
-                  'https://via.placeholder.com/500x750/333333/FFFFFF?text=Imagen+No+Disponible';
+    const poster = details.Poster !== 'N/A' ? details.Poster : PLACEHOLDER_IMAGE;
     const mediaType = details.Type === 'movie' ? 'Película' : 'Serie';
 
     // Procesar ratings
@@ -419,9 +438,9 @@ function displayMovieDetails(details, type) {
         <div class="platforms-section">
             <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
             <div class="loading">
-                <p>🔍 Buscando información de plataformas...</p>
+                <p>🔍 Buscando en plataformas...</p>
                 <p style="font-size: 0.8rem; color: var(--gray-color); margin-top: 5px;">
-                    Consultando disponibilidad en España
+                    Consultando Netflix, Amazon Prime, Disney+ y más
                 </p>
             </div>
         </div>
@@ -430,7 +449,7 @@ function displayMovieDetails(details, type) {
     detailContainer.innerHTML = `
         <div class="detail-poster">
             <img src="${poster}" alt="${details.Title}" 
-                 onerror="this.src='https://via.placeholder.com/500x750/333333/FFFFFF?text=Error+Al+Cargar'">
+                 onerror="this.src='${PLACEHOLDER_IMAGE}'">
         </div>
         <div class="detail-info">
             <h1 class="detail-title">${details.Title}</h1>
@@ -472,7 +491,6 @@ function displayMovieDetails(details, type) {
 }
 
 // [Las funciones restantes se mantienen igual...]
-// Mostrar resultados de actores, mostrar detalles de actor, paginación, etc.
 
 // Mostrar resultados de actores
 function displayActorResults(results, actorName) {
@@ -484,7 +502,7 @@ function displayActorResults(results, actorName) {
             name: actorName,
             knownFor: 'Actor/Actriz',
             popularity: 'Alta',
-            photo: 'https://via.placeholder.com/500x750/333333/FFFFFF?text=Actor',
+            photo: PLACEHOLDER_IMAGE,
             movies: results.slice(0, 6)
         }
     ];
@@ -531,11 +549,11 @@ function showActorDetails(actor, filmography) {
 
 // Mostrar detalles del actor en el modal
 function displayActorDetails(actor, filmography) {
-    const photo = 'https://via.placeholder.com/500x750/333333/FFFFFF?text=Actor';
+    const photo = PLACEHOLDER_IMAGE;
 
     const filmographyHTML = filmography.map(movie => `
-        <div class="filmography-item" onclick="showMovieDetails('${movie.imdbID}', '${movie.Type}')">
-            <img src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/150x225/333333/FFFFFF?text=Poster'}" 
+        <div class="filmography-item" onclick="showMovieDetails('${movie.imdbID}', '${movie.Type}', '${movie.Title}')">
+            <img src="${movie.Poster !== 'N/A' ? movie.Poster : PLACEHOLDER_IMAGE}" 
                  alt="${movie.Title}" class="filmography-poster">
             <div class="filmography-info">
                 <div class="filmography-name">${movie.Title}</div>
@@ -653,4 +671,5 @@ function displayPagination(totalResults, currentPage) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Buscador de Películas y Series iniciado');
     console.log('RapidAPI Key configurada');
+    console.log('💡 Consejo: Busca películas populares como "Avengers", "The Batman", "Stranger Things"');
 });

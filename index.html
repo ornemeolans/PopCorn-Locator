@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Películas y Series</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">CineSearch Pro</div>
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="Buscar películas, series o actores...">
+                <button class="search-button">Buscar</button>
+            </div>
+            <div class="filter-container">
+                <button class="filter-button active" data-type="all">Todo</button>
+                <button class="filter-button" data-type="movie">Películas</button>
+                <button class="filter-button" data-type="series">Series</button>
+                <button class="filter-button" data-type="actor">Actores</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="search-info" id="search-info">
+            <!-- Información de búsqueda se mostrará aquí -->
+        </div>
+        <div class="results-container" id="results-container">
+            <!-- Los resultados se cargarán aquí dinámicamente -->
+        </div>
+        <div class="pagination" id="pagination">
+            <!-- Paginación se cargará aquí -->
+        </div>
+    </main>
+
+    <div class="modal" id="movie-modal">
+        <div class="modal-content">
+            <button class="close-button" id="close-modal">&times;</button>
+            <div class="detail-container" id="detail-container">
+                <!-- Los detalles se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

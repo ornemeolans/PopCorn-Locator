@@ -179,57 +179,55 @@ function displayOMDbResults(results) {
     });
 }
 
-// NUEVA FUNCIÓN: Buscar por título en lugar de por ID (más confiable)
-async function searchStreamingByTitle(title, type, year = '') {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
+// Búsqueda por ID (método más confiable)
+async function searchStreamingById(imdbId, type) {
+    try {
+        const url = `https://${RAPID_API_HOST}/get?imdb_id=${imdbId}&country=es`;
         
-        xhr.addEventListener('readystatechange', function () {
-            if (this.readyState === this.DONE) {
-                console.log('Estado:', this.status);
-                
-                if (this.status === 200) {
-                    try {
-                        const response = JSON.parse(this.responseText);
-                        resolve(response);
-                    } catch (error) {
-                        console.error('Error al procesar información de streaming:', error);
-                        reject(error);
-                    }
-                } else {
-                    console.error('Error en la solicitud:', this.status, this.statusText);
-                    reject(new Error(`Error ${this.status}: ${this.statusText}`));
-                }
+        console.log('Buscando streaming por ID:', imdbId, type);
+        console.log('URL:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': RAPID_API_KEY,
+                'x-rapidapi-host': RAPID_API_HOST
             }
         });
 
-        xhr.addEventListener('error', function() {
-            console.error('Error de conexión con RapidAPI');
-            reject(new Error('Error de conexión'));
-        });
-
-        // Usar búsqueda por título en lugar de por ID
-        const searchTitle = encodeURIComponent(title);
-        const url = `https://${RAPID_API_HOST}/search/title?title=${searchTitle}&country=es&show_type=${type}&output_language=es`;
+        console.log('Respuesta HTTP:', response.status, response.statusText);
         
-        console.log('Buscando por título:', title, type);
-        console.log('URL:', url);
-        
-        xhr.open('GET', url);
-        xhr.setRequestHeader('x-rapidapi-key', RAPID_API_KEY);
-        xhr.setRequestHeader('x-rapidapi-host', RAPID_API_HOST);
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
 
-        xhr.send();
-    });
+        const data = await response.json();
+        console.log('Datos recibidos de RapidAPI:', data);
+        
+        return data;
+    } catch (error) {
+        console.error('Error buscando por ID:', error);
+        
+        // Manejo específico de errores
+        if (error.message.includes('429')) {
+            throw new Error('Límite de solicitudes excedido. Intenta más tarde.');
+        } else if (error.message.includes('401')) {
+            throw new Error('Error de autenticación con la API.');
+        } else if (error.message.includes('404')) {
+            throw new Error('Contenido no encontrado en la base de datos de streaming.');
+        } else {
+            throw error;
+        }
+    }
 }
 
-// Función alternativa usando fetch
-async function searchStreamingByTitleFetch(title, type) {
+// Método alternativo por título (como respaldo)
+async function searchStreamingByTitle(title, type) {
     try {
-        const searchTitle = encodeURIComponent(title);
-        const url = `https://${RAPID_API_HOST}/search/title?title=${searchTitle}&country=es&show_type=${type}&output_language=es`;
+        const showType = type === 'movie' ? 'movie' : 'series';
+        const url = `https://${RAPID_API_HOST}/v2/search/title?title=${encodeURIComponent(title)}&country=es&show_type=${showType}&output_language=es`;
         
-        console.log('Buscando por título (fetch):', title, type);
+        console.log('Buscando streaming por título (respaldo):', title, showType);
         
         const response = await fetch(url, {
             method: 'GET',
@@ -246,7 +244,7 @@ async function searchStreamingByTitleFetch(title, type) {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('Error con fetch:', error);
+        console.error('Error buscando por título:', error);
         throw error;
     }
 }
@@ -257,11 +255,11 @@ function updateModalWithStreamingInfo(streamingData) {
     
     let platformsHTML = '';
     
-    if (streamingData && streamingData.result && streamingData.result.length > 0) {
-        const firstResult = streamingData.result[0];
+    if (streamingData && streamingData.result) {
+        const result = streamingData.result;
         
-        if (firstResult.streamingInfo && firstResult.streamingInfo.es) {
-            const platforms = firstResult.streamingInfo.es;
+        if (result.streamingInfo && result.streamingInfo.es) {
+            const platforms = result.streamingInfo.es;
             
             platformsHTML = `
                 <h3 class="platforms-title">🎬 Disponibilidad en Streaming (España)</h3>
@@ -347,28 +345,24 @@ async function showMovieDetails(imdbID, type, title = '') {
         if (details.Response === 'True') {
             displayMovieDetails(details, type);
             
-            // Intentar cargar información de streaming por TÍTULO (más confiable)
+            // Cargar información de streaming por ID (método principal)
             try {
-                console.log('Buscando información de streaming para:', details.Title, type);
+                console.log('Buscando información de streaming para ID:', imdbID, type);
                 
-                // Usar el título de la película/serie para buscar
-                const searchTitle = details.Title;
-                
-                // Probar primero con fetch
-                const streamingData = await searchStreamingByTitleFetch(searchTitle, type);
+                const streamingData = await searchStreamingById(imdbID, type);
                 updateModalWithStreamingInfo(streamingData);
                 
             } catch (streamingError) {
-                console.error('Error con fetch, intentando con XMLHttpRequest:', streamingError);
+                console.error('Error con búsqueda por ID, intentando por título:', streamingError);
                 
-                // Fallback a XMLHttpRequest
+                // Fallback: buscar por título
                 try {
                     const searchTitle = details.Title;
                     const streamingData = await searchStreamingByTitle(searchTitle, type);
                     updateModalWithStreamingInfo(streamingData);
-                } catch (xhrError) {
-                    console.error('Error también con XMLHttpRequest:', xhrError);
-                    showStreamingError();
+                } catch (titleError) {
+                    console.error('Error también con búsqueda por título:', titleError);
+                    showStreamingError(streamingError.message);
                 }
             }
         } else {
@@ -381,12 +375,13 @@ async function showMovieDetails(imdbID, type, title = '') {
 }
 
 // Mostrar error de streaming
-function showStreamingError() {
+function showStreamingError(errorMessage = '') {
     const platformsSection = document.querySelector('.platforms-section');
     const errorHTML = `
         <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
         <div style="text-align: center; padding: 20px; background: #333; border-radius: 8px;">
             <p style="color: #e50914; font-weight: bold;">❌ No se pudo cargar la información</p>
+            ${errorMessage ? `<p style="font-size: 0.9rem; color: #ccc; margin-top: 10px;">Error: ${errorMessage}</p>` : ''}
             <p style="font-size: 0.9rem; margin-top: 10px; color: #ccc;">
                 Posibles causas:
             </p>
@@ -394,6 +389,7 @@ function showStreamingError() {
                 <li>El contenido no está en la base de datos de streaming</li>
                 <li>Problema temporal con el servicio</li>
                 <li>Límite de solicitudes alcanzado</li>
+                <li>La película/serie es muy reciente o antigua</li>
             </ul>
             <p style="font-size: 0.8rem; color: #999; margin-top: 15px;">
                 💡 <strong>Solución:</strong> Intenta con películas más populares o recientes.
@@ -489,8 +485,6 @@ function displayMovieDetails(details, type) {
         </div>
     `;
 }
-
-// [Las funciones restantes se mantienen igual...]
 
 // Mostrar resultados de actores
 function displayActorResults(results, actorName) {
@@ -672,4 +666,5 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Buscador de Películas y Series iniciado');
     console.log('RapidAPI Key configurada');
     console.log('💡 Consejo: Busca películas populares como "Avengers", "The Batman", "Stranger Things"');
+    console.log('🔧 Método principal: Búsqueda por ID de IMDb');
 });

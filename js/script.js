@@ -179,14 +179,15 @@ function displayOMDbResults(results) {
     });
 }
 
-// Búsqueda por título usando el endpoint correcto
-async function searchStreamingByTitle(title, type) {
+// Búsqueda en Streaming Availability usando el endpoint CORRECTO
+async function searchStreamingAvailability(title, type, year = '') {
     try {
-        const showType = type === 'movie' ? 'movie' : 'series';
-        const url = `https://${RAPID_API_HOST}/search/title?title=${encodeURIComponent(title)}&country=us&show_type=${showType}`;
+        console.log('🎬 Buscando en Streaming Availability:', title);
         
-        console.log('Buscando streaming por título:', title, showType);
-        console.log('URL:', url);
+        // ENDPOINT CORRECTO - v2 search
+        const url = `https://${RAPID_API_HOST}/v2/search/title?title=${encodeURIComponent(title)}&country=us&output_language=en`;
+        
+        console.log('📡 URL:', url);
         
         const response = await fetch(url, {
             method: 'GET',
@@ -196,79 +197,65 @@ async function searchStreamingByTitle(title, type) {
             }
         });
 
-        console.log('Respuesta HTTP:', response.status, response.statusText);
-        
-        if (!response.ok) {
-            // Si falla, intentar sin el parámetro show_type
-            const fallbackUrl = `https://${RAPID_API_HOST}/search/title?title=${encodeURIComponent(title)}&country=us`;
-            console.log('Intentando fallback URL:', fallbackUrl);
-            
-            const fallbackResponse = await fetch(fallbackUrl, {
-                method: 'GET',
-                headers: {
-                    'x-rapidapi-key': RAPID_API_KEY,
-                    'x-rapidapi-host': RAPID_API_HOST
-                }
-            });
-            
-            if (!fallbackResponse.ok) {
-                throw new Error(`Error ${fallbackResponse.status}: ${fallbackResponse.statusText}`);
-            }
-            
-            const data = await fallbackResponse.json();
-            return data;
-        }
-
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error buscando por título:', error);
-        throw error;
-    }
-}
-
-// Búsqueda por ID usando el endpoint correcto
-async function searchStreamingById(imdbId, type) {
-    try {
-        // El endpoint correcto para buscar por ID
-        const url = `https://${RAPID_API_HOST}/search/basic?country=us&service=netflix&type=${type}&imdb_id=${imdbId}`;
-        
-        console.log('Buscando streaming por ID:', imdbId, type);
-        console.log('URL:', url);
-        
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'x-rapidapi-key': RAPID_API_KEY,
-                'x-rapidapi-host': RAPID_API_HOST
-            }
-        });
-
-        console.log('Respuesta HTTP:', response.status, response.statusText);
+        console.log('📊 Respuesta HTTP:', response.status, response.statusText);
         
         if (!response.ok) {
             throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        console.log('Datos recibidos de RapidAPI:', data);
+        console.log('✅ Datos recibidos:', data);
         
         return data;
     } catch (error) {
-        console.error('Error buscando por ID:', error);
+        console.error('❌ Error en Streaming Availability:', error);
         throw error;
     }
 }
 
-// Función mejorada para buscar streaming - prueba múltiples métodos
-async function searchStreamingAvailability(imdbID, title, type) {
-    console.log('🔍 Buscando disponibilidad para:', title, `(${imdbID})`);
-    
-    // Método 1: Buscar por ID
+// Búsqueda por ID usando el endpoint CORRECTO
+async function searchStreamingByImdbId(imdbId) {
     try {
-        console.log('🔄 Intentando método 1: Búsqueda por ID');
-        const dataById = await searchStreamingById(imdbID, type);
-        if (dataById && dataById.results && dataById.results.length > 0) {
+        console.log('🎬 Buscando por IMDb ID:', imdbId);
+        
+        // ENDPOINT CORRECTO para búsqueda por ID
+        const url = `https://${RAPID_API_HOST}/v2/get?imdb_id=${imdbId}&output_language=en`;
+        
+        console.log('📡 URL:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': RAPID_API_KEY,
+                'x-rapidapi-host': RAPID_API_HOST
+            }
+        });
+
+        console.log('📊 Respuesta HTTP:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('✅ Datos recibidos por ID:', data);
+        
+        return data;
+    } catch (error) {
+        console.error('❌ Error buscando por ID:', error);
+        throw error;
+    }
+}
+
+// Función mejorada para buscar disponibilidad
+async function getStreamingInfo(imdbID, title, type) {
+    console.log('🔍 Iniciando búsqueda de streaming para:', title, `(${imdbID})`);
+    
+    // Método 1: Buscar por IMDb ID (más preciso)
+    try {
+        console.log('🔄 Método 1: Búsqueda por IMDb ID');
+        const dataById = await searchStreamingByImdbId(imdbID);
+        if (dataById && dataById.result) {
             console.log('✅ Éxito con método 1 (ID)');
             return dataById;
         }
@@ -278,9 +265,9 @@ async function searchStreamingAvailability(imdbID, title, type) {
     
     // Método 2: Buscar por título
     try {
-        console.log('🔄 Intentando método 2: Búsqueda por título');
-        const dataByTitle = await searchStreamingByTitle(title, type);
-        if (dataByTitle && dataByTitle.results && dataByTitle.results.length > 0) {
+        console.log('🔄 Método 2: Búsqueda por título');
+        const dataByTitle = await searchStreamingAvailability(title, type);
+        if (dataByTitle && dataByTitle.result && dataByTitle.result.length > 0) {
             console.log('✅ Éxito con método 2 (título)');
             return dataByTitle;
         }
@@ -288,111 +275,72 @@ async function searchStreamingAvailability(imdbID, title, type) {
         console.log('❌ Falló método 2 (título):', error.message);
     }
     
-    // Método 3: Búsqueda básica por título (endpoint más simple)
-    try {
-        console.log('🔄 Intentando método 3: Búsqueda básica');
-        const basicData = await searchStreamingBasic(title);
-        if (basicData && basicData.results && basicData.results.length > 0) {
-            console.log('✅ Éxito con método 3 (básica)');
-            return basicData;
-        }
-    } catch (error) {
-        console.log('❌ Falló método 3 (básica):', error.message);
-    }
-    
-    throw new Error('Todos los métodos de búsqueda fallaron');
+    throw new Error('No se pudo obtener información de streaming');
 }
 
-// Búsqueda básica - endpoint más simple y confiable
-async function searchStreamingBasic(title) {
-    try {
-        const url = `https://${RAPID_API_HOST}/search/basic?country=us&query=${encodeURIComponent(title)}`;
-        
-        console.log('Búsqueda básica:', title);
-        
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'x-rapidapi-key': RAPID_API_KEY,
-                'x-rapidapi-host': RAPID_API_HOST
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Error en búsqueda básica:', error);
-        throw error;
-    }
-}
-
-// Actualizar modal con información de streaming
+// Actualizar modal con información de streaming - VERSIÓN MEJORADA
 function updateModalWithStreamingInfo(streamingData) {
-    console.log('Datos de streaming recibidos:', streamingData);
+    console.log('🎬 Procesando datos de streaming:', streamingData);
     
     let platformsHTML = '';
     
-    if (streamingData && streamingData.results && streamingData.results.length > 0) {
-        const firstResult = streamingData.results[0];
+    // Verificar la estructura de datos y extraer información de streaming
+    let streamingInfo = null;
+    
+    if (streamingData.result) {
+        // Si es resultado único (búsqueda por ID)
+        if (streamingData.result.streamingInfo) {
+            streamingInfo = streamingData.result.streamingInfo;
+        }
+        // Si es array de resultados (búsqueda por título)
+        else if (Array.isArray(streamingData.result) && streamingData.result.length > 0) {
+            streamingInfo = streamingData.result[0].streamingInfo;
+        }
+    }
+    
+    if (streamingInfo && Object.keys(streamingInfo).length > 0) {
+        platformsHTML = `
+            <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
+            <div class="platforms-grid">
+        `;
         
-        if (firstResult.streamingInfo) {
-            platformsHTML = `
-                <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
-                <div class="platforms-grid">
-            `;
-            
-            let hasPlatforms = false;
-            
-            // Procesar información de streaming por país
-            Object.entries(firstResult.streamingInfo).forEach(([country, platforms]) => {
-                Object.entries(platforms).forEach(([platform, services]) => {
-                    hasPlatforms = true;
-                    services.forEach(service => {
-                        const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
-                        const typeText = service.type === 'subscription' ? 'SUSCRIPCIÓN' : 
-                                        service.type === 'rent' ? 'ALQUILER' : 
-                                        service.type === 'buy' ? 'COMPRA' : 'STREAM';
-                        const typeClass = service.type === 'subscription' ? 'availability-stream' : 
-                                         service.type === 'rent' ? 'availability-rent' : 'availability-buy';
-                        
-                        platformsHTML += `
-                            <div class="platform-item">
-                                <div class="platform-logo">${platform.substring(0, 2).toUpperCase()}</div>
-                                <div class="platform-name">${platformName}</div>
-                                <div class="platform-type">${service.type}</div>
-                                <div class="availability-badge ${typeClass}">
-                                    ${typeText}
-                                </div>
-                                ${service.price ? `<div style="font-size: 10px; margin-top: 3px; color: #fff;">${service.price.formatted || service.price}</div>` : ''}
-                                ${service.quality ? `<div style="font-size: 9px; color: var(--gray-color);">Calidad: ${service.quality}</div>` : ''}
-                                <div style="font-size: 8px; color: var(--gray-color); margin-top: 3px;">${country.toUpperCase()}</div>
+        let hasPlatforms = false;
+        
+        // Procesar información de streaming por país
+        Object.entries(streamingInfo).forEach(([country, platforms]) => {
+            Object.entries(platforms).forEach(([platform, services]) => {
+                hasPlatforms = true;
+                services.forEach(service => {
+                    const platformName = getPlatformName(platform);
+                    const typeText = getServiceTypeText(service.type);
+                    const typeClass = getServiceTypeClass(service.type);
+                    
+                    platformsHTML += `
+                        <div class="platform-item">
+                            <div class="platform-logo">${platform.substring(0, 2).toUpperCase()}</div>
+                            <div class="platform-name">${platformName}</div>
+                            <div class="platform-type">${service.type}</div>
+                            <div class="availability-badge ${typeClass}">
+                                ${typeText}
                             </div>
-                        `;
-                    });
+                            ${service.price ? `<div style="font-size: 10px; margin-top: 3px; color: #fff;">${service.price.formatted || service.price}</div>` : ''}
+                            ${service.quality ? `<div style="font-size: 9px; color: var(--gray-color);">Calidad: ${service.quality}</div>` : ''}
+                            <div style="font-size: 8px; color: var(--gray-color); margin-top: 3px;">${country.toUpperCase()}</div>
+                        </div>
+                    `;
                 });
             });
-            
-            if (!hasPlatforms) {
-                platformsHTML = `
-                    <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
-                    <div style="text-align: center; padding: 20px;">
-                        <p>ℹ️ Contenido encontrado, pero sin información de plataformas.</p>
-                    </div>
-                `;
-            } else {
-                platformsHTML += `</div>`;
-            }
-        } else {
+        });
+        
+        platformsHTML += `</div>`;
+        
+        if (!hasPlatforms) {
             platformsHTML = `
                 <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
                 <div style="text-align: center; padding: 20px;">
-                    <p>ℹ️ Contenido encontrado en la base de datos.</p>
+                    <p>✅ Contenido encontrado en la base de datos</p>
                     <p style="font-size: 0.9rem; color: var(--gray-color); margin-top: 10px;">
-                        Pero no hay información específica de plataformas de streaming disponibles.
+                        Pero actualmente no está disponible en plataformas de streaming.
                     </p>
                 </div>
             `;
@@ -401,22 +349,27 @@ function updateModalWithStreamingInfo(streamingData) {
         platformsHTML = `
             <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
             <div style="text-align: center; padding: 20px;">
-                <p>🔍 No se encontró información de streaming.</p>
+                <p>🔍 Información limitada</p>
                 <p style="font-size: 0.9rem; color: var(--gray-color); margin-top: 10px;">
-                    Esta película/serie no está disponible en las principales plataformas de streaming,
-                    o la información no está disponible en la base de datos.
+                    El contenido está en la base de datos pero no hay información detallada de streaming disponible.
                 </p>
+                <div style="margin-top: 15px; padding: 10px; background: #333; border-radius: 5px;">
+                    <p style="font-size: 0.8rem; color: #ccc;">💡 <strong>Consejo:</strong></p>
+                    <p style="font-size: 0.7rem; color: #999; margin-top: 5px;">
+                        • Verifica en Netflix, Amazon Prime, Disney+ directamente<br>
+                        • La película podría estar disponible para alquiler/compra<br>
+                        • Intenta con contenido más reciente o popular
+                    </p>
+                </div>
             </div>
         `;
     }
     
-    // Buscar y actualizar la sección de plataformas
+    // Actualizar la sección de plataformas
     const platformsSection = document.querySelector('.platforms-section');
     if (platformsSection) {
         platformsSection.innerHTML = platformsHTML;
     } else {
-        console.warn('No se encontró la sección de plataformas en el modal');
-        // Crear la sección si no existe
         const detailInfo = document.querySelector('.detail-info');
         if (detailInfo) {
             const newPlatformsSection = document.createElement('div');
@@ -425,6 +378,43 @@ function updateModalWithStreamingInfo(streamingData) {
             detailInfo.appendChild(newPlatformsSection);
         }
     }
+}
+
+// Funciones auxiliares para plataformas
+function getPlatformName(platform) {
+    const platformNames = {
+        'netflix': 'Netflix',
+        'amazon': 'Amazon Prime',
+        'disney': 'Disney+',
+        'hbo': 'HBO Max',
+        'hulu': 'Hulu',
+        'apple': 'Apple TV+',
+        'paramount': 'Paramount+',
+        'peacock': 'Peacock'
+    };
+    return platformNames[platform] || platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+function getServiceTypeText(type) {
+    const typeTexts = {
+        'subscription': 'SUSCRIPCIÓN',
+        'rent': 'ALQUILER',
+        'buy': 'COMPRA',
+        'free': 'GRATIS',
+        'ads': 'CON ANUNCIOS'
+    };
+    return typeTexts[type] || type.toUpperCase();
+}
+
+function getServiceTypeClass(type) {
+    const typeClasses = {
+        'subscription': 'availability-stream',
+        'rent': 'availability-rent',
+        'buy': 'availability-buy',
+        'free': 'availability-stream',
+        'ads': 'availability-stream'
+    };
+    return typeClasses[type] || 'availability-stream';
 }
 
 // Mostrar detalles de película/serie
@@ -441,9 +431,9 @@ async function showMovieDetails(imdbID, type, title = '') {
         if (details.Response === 'True') {
             displayMovieDetails(details, type);
             
-            // Cargar información de streaming usando múltiples métodos
+            // Cargar información de streaming
             try {
-                const streamingData = await searchStreamingAvailability(imdbID, details.Title, type);
+                const streamingData = await getStreamingInfo(imdbID, details.Title, type);
                 updateModalWithStreamingInfo(streamingData);
             } catch (streamingError) {
                 console.error('Error al cargar información de streaming:', streamingError);
@@ -460,27 +450,34 @@ async function showMovieDetails(imdbID, type, title = '') {
 
 // Mostrar error de streaming
 function showStreamingError(errorMessage = '') {
-    const platformsSection = document.querySelector('.platforms-section');
     const errorHTML = `
         <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
         <div style="text-align: center; padding: 20px; background: #333; border-radius: 8px;">
-            <p style="color: #e50914; font-weight: bold;">❌ No se pudo cargar la información</p>
-            ${errorMessage ? `<p style="font-size: 0.9rem; color: #ccc; margin-top: 10px;">Error: ${errorMessage}</p>` : ''}
-            <p style="font-size: 0.9rem; margin-top: 10px; color: #ccc;">
-                Posibles causas:
+            <p style="color: #e50914; font-weight: bold;">⚠️ Información limitada</p>
+            <p style="font-size: 0.9rem; color: #ccc; margin-top: 10px;">
+                No se pudo cargar información detallada de streaming.
             </p>
-            <ul style="text-align: left; font-size: 0.8rem; color: #999; margin-top: 10px; padding-left: 20px;">
-                <li>La API de streaming no tiene información para este contenido</li>
-                <li>El contenido es muy reciente o muy antiguo</li>
-                <li>Problema temporal con el servicio</li>
-                <li>Límite de solicitudes alcanzado</li>
-            </ul>
-            <p style="font-size: 0.8rem; color: #999; margin-top: 15px;">
-                💡 <strong>Solución:</strong> Intenta con películas más populares como "Avengers", "The Batman", etc.
-            </p>
+            ${errorMessage ? `<p style="font-size: 0.8rem; color: #999; margin-top: 5px;">Error técnico: ${errorMessage}</p>` : ''}
+            
+            <div style="margin-top: 15px; padding: 15px; background: #222; border-radius: 5px;">
+                <p style="font-size: 0.9rem; color: #fff; font-weight: bold;">💡 ¿Por qué pasa esto?</p>
+                <ul style="text-align: left; font-size: 0.8rem; color: #ccc; margin-top: 10px; padding-left: 20px;">
+                    <li>La API de streaming puede tener datos limitados</li>
+                    <li>Algunas películas no están en las plataformas principales</li>
+                    <li>Puede ser contenido muy reciente o muy antiguo</li>
+                </ul>
+            </div>
+            
+            <div style="margin-top: 15px; padding: 10px; background: #1a1a1a; border-radius: 5px;">
+                <p style="font-size: 0.8rem; color: #46d369;">🎯 <strong>Prueba con:</strong></p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 5px;">
+                    "Avengers: Endgame", "Stranger Things", "The Batman", "Spider-Man: No Way Home"
+                </p>
+            </div>
         </div>
     `;
     
+    const platformsSection = document.querySelector('.platforms-section');
     if (platformsSection) {
         platformsSection.innerHTML = errorHTML;
     } else {
@@ -494,7 +491,7 @@ function showStreamingError(errorMessage = '') {
     }
 }
 
-// [El resto de las funciones se mantienen igual...]
+// [Las funciones restantes se mantienen igual...]
 
 // Mostrar detalles de película/serie en el modal
 function displayMovieDetails(details, type) {
@@ -522,7 +519,7 @@ function displayMovieDetails(details, type) {
             <div class="loading">
                 <p>🔍 Buscando en plataformas...</p>
                 <p style="font-size: 0.8rem; color: var(--gray-color); margin-top: 5px;">
-                    Consultando Netflix, Amazon Prime, Disney+ y más
+                    Consultando bases de datos de streaming...
                 </p>
             </div>
         </div>
@@ -749,8 +746,8 @@ function displayPagination(totalResults, currentPage) {
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Buscador de Películas y Series iniciado');
-    console.log('RapidAPI Key configurada');
+    console.log('🎬 Buscador de Películas y Series iniciado');
+    console.log('🔑 RapidAPI Key configurada');
     console.log('💡 Consejo: Busca películas populares como "Avengers", "The Batman", "Stranger Things"');
-    console.log('🔧 Método: Búsqueda múltiple con 3 estrategias diferentes');
+    console.log('🚀 Usando endpoints actualizados de Streaming Availability API');
 });

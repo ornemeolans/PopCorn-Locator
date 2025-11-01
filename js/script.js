@@ -179,10 +179,59 @@ function displayOMDbResults(results) {
     });
 }
 
-// Búsqueda por ID (método más confiable)
+// Búsqueda por título usando el endpoint correcto
+async function searchStreamingByTitle(title, type) {
+    try {
+        const showType = type === 'movie' ? 'movie' : 'series';
+        const url = `https://${RAPID_API_HOST}/search/title?title=${encodeURIComponent(title)}&country=us&show_type=${showType}`;
+        
+        console.log('Buscando streaming por título:', title, showType);
+        console.log('URL:', url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': RAPID_API_KEY,
+                'x-rapidapi-host': RAPID_API_HOST
+            }
+        });
+
+        console.log('Respuesta HTTP:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            // Si falla, intentar sin el parámetro show_type
+            const fallbackUrl = `https://${RAPID_API_HOST}/search/title?title=${encodeURIComponent(title)}&country=us`;
+            console.log('Intentando fallback URL:', fallbackUrl);
+            
+            const fallbackResponse = await fetch(fallbackUrl, {
+                method: 'GET',
+                headers: {
+                    'x-rapidapi-key': RAPID_API_KEY,
+                    'x-rapidapi-host': RAPID_API_HOST
+                }
+            });
+            
+            if (!fallbackResponse.ok) {
+                throw new Error(`Error ${fallbackResponse.status}: ${fallbackResponse.statusText}`);
+            }
+            
+            const data = await fallbackResponse.json();
+            return data;
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error buscando por título:', error);
+        throw error;
+    }
+}
+
+// Búsqueda por ID usando el endpoint correcto
 async function searchStreamingById(imdbId, type) {
     try {
-        const url = `https://${RAPID_API_HOST}/get?imdb_id=${imdbId}&country=es`;
+        // El endpoint correcto para buscar por ID
+        const url = `https://${RAPID_API_HOST}/search/basic?country=us&service=netflix&type=${type}&imdb_id=${imdbId}`;
         
         console.log('Buscando streaming por ID:', imdbId, type);
         console.log('URL:', url);
@@ -207,27 +256,59 @@ async function searchStreamingById(imdbId, type) {
         return data;
     } catch (error) {
         console.error('Error buscando por ID:', error);
-        
-        // Manejo específico de errores
-        if (error.message.includes('429')) {
-            throw new Error('Límite de solicitudes excedido. Intenta más tarde.');
-        } else if (error.message.includes('401')) {
-            throw new Error('Error de autenticación con la API.');
-        } else if (error.message.includes('404')) {
-            throw new Error('Contenido no encontrado en la base de datos de streaming.');
-        } else {
-            throw error;
-        }
+        throw error;
     }
 }
 
-// Método alternativo por título (como respaldo)
-async function searchStreamingByTitle(title, type) {
+// Función mejorada para buscar streaming - prueba múltiples métodos
+async function searchStreamingAvailability(imdbID, title, type) {
+    console.log('🔍 Buscando disponibilidad para:', title, `(${imdbID})`);
+    
+    // Método 1: Buscar por ID
     try {
-        const showType = type === 'movie' ? 'movie' : 'series';
-        const url = `https://${RAPID_API_HOST}/v2/search/title?title=${encodeURIComponent(title)}&country=es&show_type=${showType}&output_language=es`;
+        console.log('🔄 Intentando método 1: Búsqueda por ID');
+        const dataById = await searchStreamingById(imdbID, type);
+        if (dataById && dataById.results && dataById.results.length > 0) {
+            console.log('✅ Éxito con método 1 (ID)');
+            return dataById;
+        }
+    } catch (error) {
+        console.log('❌ Falló método 1 (ID):', error.message);
+    }
+    
+    // Método 2: Buscar por título
+    try {
+        console.log('🔄 Intentando método 2: Búsqueda por título');
+        const dataByTitle = await searchStreamingByTitle(title, type);
+        if (dataByTitle && dataByTitle.results && dataByTitle.results.length > 0) {
+            console.log('✅ Éxito con método 2 (título)');
+            return dataByTitle;
+        }
+    } catch (error) {
+        console.log('❌ Falló método 2 (título):', error.message);
+    }
+    
+    // Método 3: Búsqueda básica por título (endpoint más simple)
+    try {
+        console.log('🔄 Intentando método 3: Búsqueda básica');
+        const basicData = await searchStreamingBasic(title);
+        if (basicData && basicData.results && basicData.results.length > 0) {
+            console.log('✅ Éxito con método 3 (básica)');
+            return basicData;
+        }
+    } catch (error) {
+        console.log('❌ Falló método 3 (básica):', error.message);
+    }
+    
+    throw new Error('Todos los métodos de búsqueda fallaron');
+}
+
+// Búsqueda básica - endpoint más simple y confiable
+async function searchStreamingBasic(title) {
+    try {
+        const url = `https://${RAPID_API_HOST}/search/basic?country=us&query=${encodeURIComponent(title)}`;
         
-        console.log('Buscando streaming por título (respaldo):', title, showType);
+        console.log('Búsqueda básica:', title);
         
         const response = await fetch(url, {
             method: 'GET',
@@ -244,7 +325,7 @@ async function searchStreamingByTitle(title, type) {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('Error buscando por título:', error);
+        console.error('Error en búsqueda básica:', error);
         throw error;
     }
 }
@@ -255,48 +336,63 @@ function updateModalWithStreamingInfo(streamingData) {
     
     let platformsHTML = '';
     
-    if (streamingData && streamingData.result) {
-        const result = streamingData.result;
+    if (streamingData && streamingData.results && streamingData.results.length > 0) {
+        const firstResult = streamingData.results[0];
         
-        if (result.streamingInfo && result.streamingInfo.es) {
-            const platforms = result.streamingInfo.es;
-            
+        if (firstResult.streamingInfo) {
             platformsHTML = `
-                <h3 class="platforms-title">🎬 Disponibilidad en Streaming (España)</h3>
+                <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
                 <div class="platforms-grid">
             `;
             
-            Object.entries(platforms).forEach(([platform, services]) => {
-                services.forEach(service => {
-                    const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
-                    const typeText = service.type === 'stream' ? 'STREAM' : 
-                                    service.type === 'rent' ? 'ALQUILER' : 'COMPRA';
-                    const typeClass = service.type === 'stream' ? 'availability-stream' : 
-                                     service.type === 'rent' ? 'availability-rent' : 'availability-buy';
-                    
-                    platformsHTML += `
-                        <div class="platform-item">
-                            <div class="platform-logo">${platform.substring(0, 2).toUpperCase()}</div>
-                            <div class="platform-name">${platformName}</div>
-                            <div class="platform-type">${service.type}</div>
-                            <div class="availability-badge ${typeClass}">
-                                ${typeText}
+            let hasPlatforms = false;
+            
+            // Procesar información de streaming por país
+            Object.entries(firstResult.streamingInfo).forEach(([country, platforms]) => {
+                Object.entries(platforms).forEach(([platform, services]) => {
+                    hasPlatforms = true;
+                    services.forEach(service => {
+                        const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+                        const typeText = service.type === 'subscription' ? 'SUSCRIPCIÓN' : 
+                                        service.type === 'rent' ? 'ALQUILER' : 
+                                        service.type === 'buy' ? 'COMPRA' : 'STREAM';
+                        const typeClass = service.type === 'subscription' ? 'availability-stream' : 
+                                         service.type === 'rent' ? 'availability-rent' : 'availability-buy';
+                        
+                        platformsHTML += `
+                            <div class="platform-item">
+                                <div class="platform-logo">${platform.substring(0, 2).toUpperCase()}</div>
+                                <div class="platform-name">${platformName}</div>
+                                <div class="platform-type">${service.type}</div>
+                                <div class="availability-badge ${typeClass}">
+                                    ${typeText}
+                                </div>
+                                ${service.price ? `<div style="font-size: 10px; margin-top: 3px; color: #fff;">${service.price.formatted || service.price}</div>` : ''}
+                                ${service.quality ? `<div style="font-size: 9px; color: var(--gray-color);">Calidad: ${service.quality}</div>` : ''}
+                                <div style="font-size: 8px; color: var(--gray-color); margin-top: 3px;">${country.toUpperCase()}</div>
                             </div>
-                            ${service.price ? `<div style="font-size: 10px; margin-top: 3px; color: #fff;">${service.price.formatted || service.price}</div>` : ''}
-                            ${service.quality ? `<div style="font-size: 9px; color: var(--gray-color);">Calidad: ${service.quality}</div>` : ''}
-                        </div>
-                    `;
+                        `;
+                    });
                 });
             });
             
-            platformsHTML += `</div>`;
+            if (!hasPlatforms) {
+                platformsHTML = `
+                    <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
+                    <div style="text-align: center; padding: 20px;">
+                        <p>ℹ️ Contenido encontrado, pero sin información de plataformas.</p>
+                    </div>
+                `;
+            } else {
+                platformsHTML += `</div>`;
+            }
         } else {
             platformsHTML = `
                 <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
                 <div style="text-align: center; padding: 20px;">
-                    <p>ℹ️ Información disponible, pero no en plataformas españolas.</p>
+                    <p>ℹ️ Contenido encontrado en la base de datos.</p>
                     <p style="font-size: 0.9rem; color: var(--gray-color); margin-top: 10px;">
-                        Este contenido está disponible en otros países pero no en España.
+                        Pero no hay información específica de plataformas de streaming disponibles.
                     </p>
                 </div>
             `;
@@ -345,25 +441,13 @@ async function showMovieDetails(imdbID, type, title = '') {
         if (details.Response === 'True') {
             displayMovieDetails(details, type);
             
-            // Cargar información de streaming por ID (método principal)
+            // Cargar información de streaming usando múltiples métodos
             try {
-                console.log('Buscando información de streaming para ID:', imdbID, type);
-                
-                const streamingData = await searchStreamingById(imdbID, type);
+                const streamingData = await searchStreamingAvailability(imdbID, details.Title, type);
                 updateModalWithStreamingInfo(streamingData);
-                
             } catch (streamingError) {
-                console.error('Error con búsqueda por ID, intentando por título:', streamingError);
-                
-                // Fallback: buscar por título
-                try {
-                    const searchTitle = details.Title;
-                    const streamingData = await searchStreamingByTitle(searchTitle, type);
-                    updateModalWithStreamingInfo(streamingData);
-                } catch (titleError) {
-                    console.error('Error también con búsqueda por título:', titleError);
-                    showStreamingError(streamingError.message);
-                }
+                console.error('Error al cargar información de streaming:', streamingError);
+                showStreamingError(streamingError.message);
             }
         } else {
             detailContainer.innerHTML = '<div class="error">Error al cargar los detalles</div>';
@@ -386,13 +470,13 @@ function showStreamingError(errorMessage = '') {
                 Posibles causas:
             </p>
             <ul style="text-align: left; font-size: 0.8rem; color: #999; margin-top: 10px; padding-left: 20px;">
-                <li>El contenido no está en la base de datos de streaming</li>
+                <li>La API de streaming no tiene información para este contenido</li>
+                <li>El contenido es muy reciente o muy antiguo</li>
                 <li>Problema temporal con el servicio</li>
                 <li>Límite de solicitudes alcanzado</li>
-                <li>La película/serie es muy reciente o antigua</li>
             </ul>
             <p style="font-size: 0.8rem; color: #999; margin-top: 15px;">
-                💡 <strong>Solución:</strong> Intenta con películas más populares o recientes.
+                💡 <strong>Solución:</strong> Intenta con películas más populares como "Avengers", "The Batman", etc.
             </p>
         </div>
     `;
@@ -409,6 +493,8 @@ function showStreamingError(errorMessage = '') {
         }
     }
 }
+
+// [El resto de las funciones se mantienen igual...]
 
 // Mostrar detalles de película/serie en el modal
 function displayMovieDetails(details, type) {
@@ -666,5 +752,5 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Buscador de Películas y Series iniciado');
     console.log('RapidAPI Key configurada');
     console.log('💡 Consejo: Busca películas populares como "Avengers", "The Batman", "Stranger Things"');
-    console.log('🔧 Método principal: Búsqueda por ID de IMDb');
+    console.log('🔧 Método: Búsqueda múltiple con 3 estrategias diferentes');
 });

@@ -122,7 +122,7 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
     resultsContainer.innerHTML = '';
 
     results.forEach(item => {
-        // Ignorar resultados sin tipo de medio
+        // Ignorar resultados sin tipo de medio (a veces ocurre en búsquedas multi)
         if (!item.media_type) return;
 
         const isMovie = item.media_type === 'movie';
@@ -130,46 +130,39 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
         const isActor = item.media_type === 'person';
 
         let title = item.title || item.name;
+        let year = (isMovie ? item.release_date : item.first_air_date) ? (isMovie ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
+        let posterPath = item.poster_path || item.profile_path;
+        let cardType = isActor ? 'actor-card' : 'movie-card';
+        let imageClass = isActor ? 'actor-photo' : 'movie-poster';
+        let infoClass = isActor ? 'actor-info' : 'movie-info';
         
-        let posterPath = item.poster_path || item.profile_path; // Usar profile_path para actores
         const poster = posterPath ? TMDB_IMAGE_BASE_URL + posterPath : PLACEHOLDER_IMAGE;
 
         const card = document.createElement('div');
-
-        // Lógica de rendering específica para cada tipo
+        card.className = cardType;
+        
         if (isActor) {
-            const knownFor = item.known_for_department || 'Conocido por';
-            const popularFor = item.known_for && item.known_for.length > 0 ? 
-                               item.known_for.slice(0, 2).map(m => m.title || m.name).join(', ') : 'N/A';
-            
-            card.className = 'actor-card';
+             const knownFor = item.known_for_department || 'Conocido por';
+             const popularFor = item.known_for && item.known_for.length > 0 ? 
+                                item.known_for.slice(0, 2).map(m => m.title || m.name).join(', ') : 'N/A';
 
-            card.innerHTML = `
-                <img src="${poster}" alt="${title}" class="actor-photo" 
+             card.innerHTML = `
+                <img src="${poster}" alt="${title}" class="${imageClass}" 
                     onerror="this.src='${PLACEHOLDER_IMAGE}'">
-                <div class="actor-info">
+                <div class="${infoClass}">
                     <h3 class="actor-name">${title}</h3>
                     <div class="actor-known-for">${knownFor}</div>
                     <div class="actor-role">Pop. ${item.popularity.toFixed(0)} | Por: ${popularFor}</div>
                 </div>
             `;
-            
-            card.addEventListener('click', () => {
-                showActorDetails(item.id, item.name);
-            });
-            
-        } else if (isMovie || isSeries) {
-            
-            let year = (isMovie ? item.release_date : item.first_air_date) ? (isMovie ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
+        } else {
             const mediaTypeDisplay = isMovie ? 'Película' : 'Serie';
             const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
-            
-            card.className = 'movie-card';
 
             card.innerHTML = `
-                <img src="${poster}" alt="${title}" class="movie-poster" 
+                <img src="${poster}" alt="${title}" class="${imageClass}" 
                     onerror="this.src='${PLACEHOLDER_IMAGE}'">
-                <div class="movie-info">
+                <div class="${infoClass}">
                     <h3 class="movie-title">${title}</h3>
                     <div class="movie-year">${year} • ${mediaTypeDisplay}</div>
                     <div class="movie-rating">
@@ -178,15 +171,15 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
                     </div>
                 </div>
             `;
-            
-            card.addEventListener('click', () => {
-                showMovieDetails(item.id, item.media_type);
-            });
-            
-        } else {
-            // Ignorar otros tipos (e.g., collections)
-            return;
         }
+
+        card.addEventListener('click', () => {
+            if (isActor) {
+                showActorDetails(item.id, item.name);
+            } else {
+                showMovieDetails(item.id, item.media_type);
+            }
+        });
 
         resultsContainer.appendChild(card);
     });
@@ -636,8 +629,4 @@ function displayPagination(totalResults, currentPage, totalPages) {
 
 
 // Inicialización
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎬 Buscador de Películas y Series iniciado');
-    console.log('🚀 Usando TMDB como API única para búsqueda y streaming');
-    console.log('💡 Consejo: Busca películas populares como "Avengers", "The Batman", "Stranger Things"');
-});
+document.addEventListener('DOMContentLoaded', () => {});

@@ -701,8 +701,5 @@ function displayPagination(totalResults, currentPage, totalPages) {
 
 // Inicialización (Carga contenido popular al inicio)
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎬 Buscador de Películas y Series iniciado');
-    console.log('🚀 Usando TMDB como API única para búsqueda y streaming');
-    console.log('💡 Consejo: Busca películas populares como "Avengers", "The Batman", "Stranger Things"');
     loadInitialContent();
 });

@@ -1,10 +1,14 @@
 :root {
-    --primary-color: #e50914;
-    --secondary-color: #0071eb;
-    --dark-color: #141414;
-    --light-color: #f4f4f4;
-    --gray-color: #999;
-    --success-color: #46d369;
+    /* Paleta Aesthetic: Tonos Oscuros Suaves (Deep Blue Gray) y Acentos Vibrantes */
+    --primary-color: #00A389; /* Teal - Acento principal e invitante */
+    --secondary-color: #7951A8; /* Indigo/Purple - Acento secundario y de reseteo */
+    --dark-color: #1F2937; /* Deep Blue Gray - Fondo principal */
+    --medium-dark-color: #2D3748; /* Fondo de tarjetas y contenedores */
+    --light-color: #f4f4f4; /* Texto principal */
+    --gray-color: #A0AEC0; /* Texto secundario (más claro para visibilidad) */
+    --success-color: #46D369; /* Verde para streaming (Mantiene el contraste) */
+    --rent-color: #FFC107; /* Dorado/Amarillo para Alquiler y Estrellas */
+    --buy-color: #3182CE; /* Azul suave para Compra */
 }
 
 * {
@@ -15,7 +19,7 @@
 
 body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--dark-color);
+    background-color: var(--dark-color); /* Nuevo fondo oscuro suave */
     color: var(--light-color);
     line-height: 1.6;
 }
@@ -27,18 +31,18 @@ body {
 }
 
 header {
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: rgba(31, 41, 55, 0.95); /* Fondo de cabecera con opacidad */
     padding: 20px 0;
     position: sticky;
     top: 0;
     z-index: 100;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--medium-dark-color);
 }
 
 .logo {
     color: var(--primary-color);
-    font-size: 2rem;
-    font-weight: bold;
+    font-size: 2.2rem;
+    font-weight: 700;
     margin-bottom: 10px;
 }
 
@@ -51,41 +55,39 @@ header {
     flex: 1;
     padding: 12px 15px;
     font-size: 16px;
-    border: none;
-    border-radius: 4px 0 0 4px;
-    background-color: #333;
+    border: 1px solid var(--medium-dark-color);
+    border-radius: 8px 0 0 8px; /* Bordes más redondeados */
+    background-color: var(--medium-dark-color);
+    color: var(--light-color);
+}
+
+.search-button, .reset-button { 
+    padding: 12px 20px;
     color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.1s;
 }
 
 .search-button {
-    padding: 12px 20px;
     background-color: var(--primary-color);
-    color: white;
-    border: none;
-    /* Ajustado para el nuevo botón */
-    border-radius: 0; 
-    cursor: pointer;
-    font-weight: bold;
+    border-radius: 0; /* Sin borde redondeado aquí */
 }
 
 .search-button:hover {
-    background-color: #f40612;
+    background-color: #007A65; /* Teal un poco más oscuro */
+    transform: translateY(-1px);
 }
 
-/* Nuevo Estilo para el botón de Resetear */
 .reset-button {
-    padding: 12px 20px;
-    background-color: var(--gray-color); /* Color gris/secundario */
-    color: white;
-    border: none;
-    border-radius: 0 4px 4px 0; /* Borde redondeado al final */
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
+    background-color: var(--secondary-color); /* Color secundario para reset */
+    border-radius: 0 8px 8px 0; /* Borde redondeado al final */
 }
 
 .reset-button:hover {
-    background-color: #555;
+    background-color: #5B3C84; /* Purple un poco más oscuro */
+    transform: translateY(-1px);
 }
 
 .filter-container {
@@ -97,48 +99,53 @@ header {
 
 .filter-button {
     padding: 8px 16px;
-    background-color: #333;
-    color: white;
+    background-color: var(--medium-dark-color);
+    color: var(--gray-color);
     border: none;
-    border-radius: 4px;
+    border-radius: 20px; /* Estilo de píldora (aesthetic) */
     cursor: pointer;
     transition: all 0.3s ease;
+    font-weight: 500;
 }
 
 .filter-button.active {
     background-color: var(--primary-color);
+    color: var(--dark-color); /* Mejor contraste de texto */
+    font-weight: bold;
 }
 
 .filter-button:hover:not(.active) {
-    background-color: #555;
+    background-color: var(--secondary-color);
+    color: var(--light-color);
 }
 
 .search-info {
     margin: 20px 0;
     padding: 15px;
-    background-color: #222;
+    background-color: var(--medium-dark-color);
     border-radius: 8px;
     border-left: 4px solid var(--primary-color);
+    color: var(--light-color);
 }
 
 .results-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
+    gap: 25px;
     margin-top: 20px;
 }
 
 .movie-card, .actor-card {
-    background-color: #222;
-    border-radius: 8px;
+    background-color: var(--medium-dark-color);
+    border-radius: 12px; /* Más redondeado */
     overflow: hidden;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
 }
 
 .movie-card:hover, .actor-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    transform: translateY(-8px); /* Más notable */
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
 }
 
 .movie-poster, .actor-photo {
@@ -152,11 +159,12 @@ header {
 }
 
 .movie-title, .actor-name {
-    font-size: 16px;
+    font-size: 1.1rem;
     margin-bottom: 5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-weight: 600;
 }
 
 .movie-year, .actor-known-for {
@@ -171,36 +179,20 @@ header {
 }
 
 .star {
-    color: gold;
+    color: var(--rent-color); /* Estrellas doradas */
     margin-right: 5px;
 }
 
-.actor-role {
-    font-size: 12px;
-    color: var(--success-color);
-    margin-top: 3px;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
-    z-index: 1000;
-    overflow-y: auto;
-}
+/* Estilos del Modal */
 
 .modal-content {
-    background-color: #222;
+    background-color: var(--medium-dark-color);
     margin: 50px auto;
     padding: 30px;
-    border-radius: 8px;
+    border-radius: 12px;
     max-width: 900px;
     position: relative;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
 }
 
 .close-button {
@@ -208,9 +200,9 @@ header {
     top: 15px;
     right: 15px;
     font-size: 28px;
-    color: white;
+    color: var(--light-color);
     cursor: pointer;
-    background: none;
+    background: var(--dark-color); /* Color de fondo oscuro */
     border: none;
     width: 40px;
     height: 40px;
@@ -222,29 +214,7 @@ header {
 }
 
 .close-button:hover {
-    background-color: #333;
-}
-
-.detail-container {
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-}
-
-@media (min-width: 768px) {
-    .detail-container {
-        flex-direction: row;
-    }
-}
-
-.detail-poster {
-    flex: 0 0 300px;
-}
-
-.detail-poster img {
-    width: 100%;
-    border-radius: 8px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    background-color: #444;
 }
 
 .detail-info {
@@ -252,279 +222,63 @@ header {
 }
 
 .detail-title {
-    font-size: 2.2rem;
-    margin-bottom: 15px;
-    color: white;
+    color: var(--light-color);
+    font-size: 2.4rem;
+    font-weight: 700;
 }
 
 .detail-meta {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .meta-item {
-    background-color: #333;
+    background-color: var(--dark-color);
     padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
-
-.detail-overview {
-    margin-bottom: 25px;
-    line-height: 1.7;
-}
-
-.detail-overview h3 {
-    margin-bottom: 10px;
-    color: var(--light-color);
-}
-
-.platforms-section {
-    margin-top: 25px;
+    border-radius: 6px;
+    font-size: 0.85rem;
 }
 
 .platforms-title {
-    font-size: 1.3rem;
-    margin-bottom: 15px;
-    color: white;
-}
-
-.platforms-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-weight: 700;
 }
 
 .platform-item {
-    background-color: #333;
+    background-color: var(--dark-color);
     padding: 15px;
-    border-radius: 8px;
+    border-radius: 10px;
     text-align: center;
-    transition: transform 0.2s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-.platform-item:hover {
-    transform: scale(1.05);
-}
-
-.platform-logo {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #333, #555);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 10px;
-    font-size: 14px;
-    font-weight: bold;
-    color: white;
-}
-
-.platform-name {
-    font-size: 12px;
-    margin-bottom: 5px;
-}
-
-.platform-type {
-    font-size: 10px;
-    color: var(--gray-color);
-    text-transform: uppercase;
-}
-
-.availability-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    font-weight: bold;
-    margin-top: 5px;
-}
-
+/* Ajuste de colores de los badges de disponibilidad */
 .availability-stream {
     background-color: var(--success-color);
-    color: black;
+    color: var(--dark-color); /* Texto oscuro en fondo claro */
 }
 
 .availability-rent {
-    background-color: #ffa500;
-    color: black;
+    background-color: var(--rent-color);
+    color: var(--dark-color);
 }
 
 .availability-buy {
-    background-color: var(--secondary-color);
-    color: white;
+    background-color: var(--buy-color);
+    color: var(--light-color);
 }
 
-.actor-filmography {
-    margin-top: 25px;
-}
-
-.filmography-title {
-    font-size: 1.3rem;
-    margin-bottom: 15px;
-    color: white;
-}
-
-.filmography-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
-}
-
-.filmography-item {
-    background-color: #333;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.filmography-item:hover {
-    transform: scale(1.05);
-}
-
-.filmography-poster {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-}
-
-.filmography-info {
-    padding: 10px;
-}
-
-.filmography-name {
-    font-size: 12px;
-    margin-bottom: 5px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.filmography-year {
-    font-size: 10px;
-    color: var(--gray-color);
-}
-
-.loading {
-    text-align: center;
-    padding: 40px;
-    font-size: 1.2rem;
-}
-
-.error {
-    text-align: center;
-    padding: 40px;
-    color: var(--primary-color);
-    background-color: #222;
-    border-radius: 8px;
-    margin: 20px 0;
-}
-
-.no-results {
-    text-align: center;
-    padding: 40px;
-    font-size: 1.2rem;
-    background-color: #222;
-    border-radius: 8px;
-    margin: 20px 0;
-}
-
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 40px 0;
-    flex-wrap: wrap;
-}
-
+/* Estilos de Pagincación */
 .pagination-button {
-    padding: 10px 16px;
-    background-color: #333;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+    background-color: var(--medium-dark-color);
+    color: var(--light-color);
+    border-radius: 6px;
 }
 
 .pagination-button.active {
     background-color: var(--primary-color);
+    color: var(--dark-color);
 }
 
 .pagination-button:hover:not(.active) {
-    background-color: #555;
-}
-
-.pagination-button:disabled {
-    background-color: #222;
-    color: #666;
-    cursor: not-allowed;
-}
-
-.detail-info-item {
-    margin-bottom: 12px;
-    display: flex;
-    align-items: flex-start;
-}
-
-.detail-info-label {
-    font-weight: bold;
-    color: var(--gray-color);
-    min-width: 120px;
-}
-
-.detail-info-content {
-    flex: 1;
-}
-
-.detail-rating {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    padding: 5px 10px;
-    background-color: #333;
-    border-radius: 4px;
-}
-
-.rating-source {
-    font-size: 0.8rem;
-    color: var(--gray-color);
-}
-
-.actor-bio {
-    line-height: 1.6;
-    margin-bottom: 20px;
-}
-
-.actor-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.stat-item {
-    background-color: #333;
-    padding: 15px;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--primary-color);
-    display: block;
-}
-
-.stat-label {
-    font-size: 0.8rem;
-    color: var(--gray-color);
-    margin-top: 5px;
+    background-color: var(--secondary-color);
 }

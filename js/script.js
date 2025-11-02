@@ -9,6 +9,7 @@ const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 // Elementos del DOM
 const searchInput = document.querySelector('.search-input');
 const searchButton = document.querySelector('.search-button');
+const resetButton = document.getElementById('reset-button'); // Nuevo
 const filterButtons = document.querySelectorAll('.filter-button');
 const resultsContainer = document.getElementById('results-container');
 const searchInfo = document.getElementById('search-info');
@@ -23,9 +24,10 @@ let currentPage = 1;
 let totalResults = 0;
 let currentSearchQuery = '';
 let isLoading = false;
+let isInitialLoad = true; // Nuevo: Para controlar la carga inicial
 
 // Placeholder para imágenes
-const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRkZGIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiPk5vIEltYWdlPC9icj5BdmFpbGFibGU8L3RleHQ+Cjwvc3ZnPg==';
+const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRkZGIiBmb250LWZhbWlseT0iQXJpYWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvYnI+QXZhaWxhYmxlPC90ZXh0Pgo8L3N2Zz4=';
 
 // Event Listeners
 searchButton.addEventListener('click', performSearch);
@@ -43,6 +45,9 @@ filterButtons.forEach(button => {
         if (searchInput.value.trim()) {
             currentPage = 1;
             performSearch();
+        } else if (!isLoading) {
+             // Si no hay query, pero se cambia el filtro, cargamos populares de nuevo
+             // O simplemente no hacemos nada para no sobrecargar la API al cambiar filtros vacíos
         }
     });
 });
@@ -57,11 +62,58 @@ window.addEventListener('click', (e) => {
     }
 });
 
-// Funciones principales
+// NUEVO: Event Listener para el botón de reseteo
+resetButton.addEventListener('click', resetSearch);
+
+// Funciones de control de estado
+
+function resetSearch() {
+    searchInput.value = '';
+    currentSearchQuery = '';
+    currentPage = 1;
+    currentSearchType = 'all';
+    filterButtons.forEach(btn => btn.classList.remove('active'));
+    document.querySelector('[data-type="all"]').classList.add('active');
+    loadInitialContent();
+}
+
+function loadInitialContent() {
+    isInitialLoad = true;
+    loadPopularContent();
+}
+
+// NUEVO: Carga de Contenido Popular
+async function loadPopularContent() {
+    resultsContainer.innerHTML = '<div class="loading">Cargando contenido popular...</div>';
+    searchInfo.innerHTML = '';
+    paginationContainer.innerHTML = '';
+
+    const popularUrl = `${TMDB_BASE_URL}/trending/all/day?api_key=${TMDB_API_KEY}&language=es-ES`;
+
+    try {
+        const response = await fetch(popularUrl);
+        const data = await response.json();
+
+        if (data.results && data.results.length > 0) {
+            displayTMDBResults(data.results, 0, 0, 1); // Pasamos 0/0 para no mostrar paginación en populares
+            searchInfo.innerHTML = '<p>✨ **Contenido Popular y Tendencias**</p>';
+        } else {
+            resultsContainer.innerHTML = '<div class="no-results">No se pudo cargar el contenido popular.</div>';
+        }
+    } catch (error) {
+        console.error('Error al cargar populares:', error);
+        resultsContainer.innerHTML = '<div class="error">Error al cargar el contenido popular.</div>';
+    }
+}
+
+
+// Función principal de búsqueda
 function performSearch() {
     const query = searchInput.value.trim();
     if (!query) return;
 
+    // Si hay una búsqueda, ya no es carga inicial
+    isInitialLoad = false;
     currentSearchQuery = query;
     currentPage = 1;
     resultsContainer.innerHTML = '<div class="loading">Buscando...</div>';
@@ -198,7 +250,12 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
         resultsContainer.appendChild(card);
     });
     
-    displayPagination(totalResults, currentPage, totalPages);
+    // Solo mostrar paginación si no es la carga inicial de populares
+    if (!isInitialLoad && totalPages > 1) {
+        displayPagination(totalResults, currentPage, totalPages);
+    } else {
+        paginationContainer.innerHTML = '';
+    }
 }
 
 // ********************************************
@@ -642,5 +699,10 @@ function displayPagination(totalResults, currentPage, totalPages) {
 }
 
 
-// Inicialización
-document.addEventListener('DOMContentLoaded', () => {});
+// Inicialización (Carga contenido popular al inicio)
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🎬 Buscador de Películas y Series iniciado');
+    console.log('🚀 Usando TMDB como API única para búsqueda y streaming');
+    console.log('💡 Consejo: Busca películas populares como "Avengers", "The Batman", "Stranger Things"');
+    loadInitialContent();
+});

@@ -62,13 +62,30 @@ header {
     background-color: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 0 4px 4px 0;
+    /* Ajustado para el nuevo botón */
+    border-radius: 0; 
     cursor: pointer;
     font-weight: bold;
 }
 
 .search-button:hover {
     background-color: #f40612;
+}
+
+/* Nuevo Estilo para el botón de Resetear */
+.reset-button {
+    padding: 12px 20px;
+    background-color: var(--gray-color); /* Color gris/secundario */
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0; /* Borde redondeado al final */
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.reset-button:hover {
+    background-color: #555;
 }
 
 .filter-container {

@@ -1,10 +1,7 @@
 // Configuración de APIs
-const TMDB_API_KEY = 'd06b9cae7dc7f8b3e3b9b3c449f757e6'; // 👈 ¡REEMPLAZAR ESTA CLAVE!
+const TMDB_API_KEY = 'd06b9cae7dc7f8b3e3b9b3c449f757e6'; 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const OMDB_API_KEY = 'ccca0c5e'; // Se mantiene OMDB para búsqueda principal y detalles básicos
-
-// URLs de las APIs
-const OMDB_API_BASE_URL = 'https://www.omdbapi.com/';
+// OMDB ya no es necesario
 
 // Elementos del DOM
 const searchInput = document.querySelector('.search-input');
@@ -23,6 +20,9 @@ let currentPage = 1;
 let totalResults = 0;
 let currentSearchQuery = '';
 let isLoading = false;
+
+// Base URL para imágenes de TMDB
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
 // Placeholder para imágenes
 const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRkZGIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiPk5vIEltYWdlPC9icj5BdmFpbGFibGU8L3RleHQ+Cjwvc3ZnPg==';
@@ -68,160 +68,147 @@ function performSearch() {
     searchInfo.innerHTML = '';
     paginationContainer.innerHTML = '';
     
-    if (currentSearchType === 'actor') {
-        searchActors(query, currentPage);
-    } else {
-        searchMoviesAndSeries(query, currentPage);
-    }
+    // Ahora todo usa TMDB
+    searchWithTMDB(query, currentPage);
 }
 
-// Búsqueda de películas y series
-async function searchMoviesAndSeries(query, page = 1) {
+// Búsqueda unificada con TMDB
+async function searchWithTMDB(query, page = 1) {
     if (isLoading) return;
     
     isLoading = true;
+    resultsContainer.innerHTML = '<div class="loading">Buscando...</div>';
     
-    try {
-        await searchWithOMDb(query, page);
-    } catch (error) {
-        console.error('Error en la búsqueda:', error);
-        resultsContainer.innerHTML = '<div class="error">Error al cargar los resultados</div>';
-    } finally {
-        isLoading = false;
+    let url = `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&language=es-ES`;
+    let typeFilter = currentSearchType;
+    
+    // Si la búsqueda no es 'all', usamos endpoints específicos para mejor precisión
+    if (typeFilter === 'movie' || typeFilter === 'series' || typeFilter === 'actor') {
+        let tmdbType = typeFilter === 'series' ? 'tv' : typeFilter === 'actor' ? 'person' : 'movie';
+        url = `${TMDB_BASE_URL}/search/${tmdbType}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&language=es-ES`;
     }
-}
 
-// Búsqueda con OMDb API
-async function searchWithOMDb(query, page) {
     try {
-        let url = `${OMDB_API_BASE_URL}?apikey=${OMDB_API_KEY}&s=${encodeURIComponent(query)}&page=${page}`;
-        
-        if (currentSearchType === 'movie') {
-            url += '&type=movie';
-        } else if (currentSearchType === 'series') {
-            url += '&type=series';
-        }
-
         const response = await fetch(url);
         const data = await response.json();
-
-        if (data.Response === 'True' && data.Search && data.Search.length > 0) {
-            displayOMDbResults(data.Search);
-            totalResults = parseInt(data.totalResults);
-            displayPagination(totalResults, page);
-            searchInfo.innerHTML = `<p>Mostrando ${data.Search.length} resultados para: <strong>"${query}"</strong></p>`;
+        
+        if (data.results && data.results.length > 0) {
+            
+            // Filtramos el resultado 'multi' para ser más precisos si es necesario
+            let filteredResults = data.results;
+            if (currentSearchType === 'movie') {
+                filteredResults = data.results.filter(item => item.media_type === 'movie');
+            } else if (currentSearchType === 'series') {
+                filteredResults = data.results.filter(item => item.media_type === 'tv');
+            } else if (currentSearchType === 'actor') {
+                filteredResults = data.results.filter(item => item.media_type === 'person');
+            }
+            
+            displayTMDBResults(filteredResults, data.total_results, data.total_pages, page);
+            totalResults = data.total_results;
+            searchInfo.innerHTML = `<p>Mostrando ${filteredResults.length} resultados para: <strong>"${query}"</strong></p>`;
         } else {
             resultsContainer.innerHTML = '<div class="no-results">No se encontraron resultados</div>';
         }
     } catch (error) {
-        console.error('Error con OMDb:', error);
+        console.error('Error en la búsqueda con TMDB:', error);
         resultsContainer.innerHTML = '<div class="error">Error al cargar los resultados</div>';
-    }
-}
-
-// Búsqueda de actores
-async function searchActors(query, page = 1) {
-    if (isLoading) return;
-    
-    isLoading = true;
-    
-    try {
-        const url = `${OMDB_API_BASE_URL}?apikey=${OMDB_API_KEY}&s=${encodeURIComponent(query)}&page=${page}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.Response === 'True' && data.Search) {
-            displayActorResults(data.Search, query);
-            searchInfo.innerHTML = `<p>Mostrando resultados para el actor: <strong>"${query}"</strong></p>`;
-        } else {
-            resultsContainer.innerHTML = '<div class="no-results">No se encontraron actores</div>';
-        }
-    } catch (error) {
-        console.error('Error al buscar actores:', error);
-        resultsContainer.innerHTML = '<div class="error">Error al buscar actores</div>';
     } finally {
         isLoading = false;
     }
 }
 
-// Mostrar resultados de OMDb
-function displayOMDbResults(results) {
+// Mostrar resultados de TMDB
+function displayTMDBResults(results, totalResults, totalPages, currentPage) {
     resultsContainer.innerHTML = '';
 
     results.forEach(item => {
-        const movieCard = document.createElement('div');
-        movieCard.className = 'movie-card';
+        // Ignorar resultados sin tipo de medio (a veces ocurre en búsquedas multi)
+        if (!item.media_type) return;
+
+        const isMovie = item.media_type === 'movie';
+        const isSeries = item.media_type === 'tv';
+        const isActor = item.media_type === 'person';
+
+        let title = item.title || item.name;
+        let year = (isMovie ? item.release_date : item.first_air_date) ? (isMovie ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
+        let posterPath = item.poster_path || item.profile_path;
+        let cardType = isActor ? 'actor-card' : 'movie-card';
+        let imageClass = isActor ? 'actor-photo' : 'movie-poster';
+        let infoClass = isActor ? 'actor-info' : 'movie-info';
         
-        const poster = item.Poster !== 'N/A' ? item.Poster : PLACEHOLDER_IMAGE;
-        const title = item.Title;
-        const year = item.Year;
-        const type = item.Type === 'movie' ? 'Película' : 'Serie';
+        const poster = posterPath ? TMDB_IMAGE_BASE_URL + posterPath : PLACEHOLDER_IMAGE;
 
-        movieCard.innerHTML = `
-            <img src="${poster}" alt="${title}" class="movie-poster" 
-                 onerror="this.src='${PLACEHOLDER_IMAGE}'">
-            <div class="movie-info">
-                <h3 class="movie-title">${title}</h3>
-                <div class="movie-year">${year} • ${type}</div>
-                <div class="movie-rating">
-                    <span class="star">★</span>
-                    <span>Ver detalles</span>
+        const card = document.createElement('div');
+        card.className = cardType;
+        
+        if (isActor) {
+             const knownFor = item.known_for_department || 'Conocido por';
+             const popularFor = item.known_for && item.known_for.length > 0 ? 
+                                item.known_for.slice(0, 2).map(m => m.title || m.name).join(', ') : 'N/A';
+
+             card.innerHTML = `
+                <img src="${poster}" alt="${title}" class="${imageClass}" 
+                    onerror="this.src='${PLACEHOLDER_IMAGE}'">
+                <div class="${infoClass}">
+                    <h3 class="actor-name">${title}</h3>
+                    <div class="actor-known-for">${knownFor}</div>
+                    <div class="actor-role">Pop. ${item.popularity.toFixed(0)} | Por: ${popularFor}</div>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            const mediaTypeDisplay = isMovie ? 'Película' : 'Serie';
+            const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
 
-        movieCard.addEventListener('click', () => {
-            showMovieDetails(item.imdbID, item.Type, item.Title);
+            card.innerHTML = `
+                <img src="${poster}" alt="${title}" class="${imageClass}" 
+                    onerror="this.src='${PLACEHOLDER_IMAGE}'">
+                <div class="${infoClass}">
+                    <h3 class="movie-title">${title}</h3>
+                    <div class="movie-year">${year} • ${mediaTypeDisplay}</div>
+                    <div class="movie-rating">
+                        <span class="star">★</span>
+                        <span>${rating}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        card.addEventListener('click', () => {
+            if (isActor) {
+                showActorDetails(item.id, item.name);
+            } else {
+                showMovieDetails(item.id, item.media_type);
+            }
         });
 
-        resultsContainer.appendChild(movieCard);
+        resultsContainer.appendChild(card);
     });
+    
+    displayPagination(totalResults, currentPage, totalPages);
 }
 
 // ********************************************
 // * LÓGICA DE STREAMING CON TMDB *
 // ********************************************
 
-// Función para buscar disponibilidad con TMDB
-async function getStreamingInfo(imdbID, title, type) {
-    console.log('🔍 Iniciando búsqueda de streaming con TMDB para:', title, `(${imdbID})`);
-
-    // PASO 1: Obtener TMDB ID usando el imdbID
+// Función para obtener la disponibilidad de streaming de TMDB
+async function getStreamingInfo(id, type) {
     const mediaType = type === 'movie' ? 'movie' : 'tv';
-    const findUrl = `${TMDB_BASE_URL}/find/${imdbID}?api_key=${TMDB_API_KEY}&external_source=imdb_id`;
+    const providersUrl = `${TMDB_BASE_URL}/${mediaType}/${id}/watch/providers?api_key=${TMDB_API_KEY}`;
     
     try {
-        const findResponse = await fetch(findUrl);
-        const findData = await findResponse.json();
-        
-        let tmdbID = null;
-        
-        if (mediaType === 'movie' && findData.movie_results && findData.movie_results.length > 0) {
-            tmdbID = findData.movie_results[0].id;
-        } else if (mediaType === 'tv' && findData.tv_results && findData.tv_results.length > 0) {
-            tmdbID = findData.tv_results[0].id;
-        }
-
-        if (!tmdbID) {
-            throw new Error('No se pudo encontrar el TMDB ID (No hay información de streaming).');
-        }
-
-        // PASO 2: Obtener los proveedores de streaming
-        const providersUrl = `${TMDB_BASE_URL}/${mediaType}/${tmdbID}/watch/providers?api_key=${TMDB_API_KEY}`;
         const providersResponse = await fetch(providersUrl);
         const providersData = await providersResponse.json();
 
         if (providersData.results) {
-            console.log('✅ Éxito con TMDB.');
-            // Devolvemos todos los resultados de los países
             return providersData.results; 
         }
 
         throw new Error('No hay información de streaming disponible en TMDB.');
 
     } catch (error) {
-        console.error('❌ Error en TMDB:', error);
+        console.error('❌ Error al obtener proveedores de streaming:', error);
         throw error;
     }
 }
@@ -229,15 +216,13 @@ async function getStreamingInfo(imdbID, title, type) {
 
 // Actualizar modal con información de streaming - VERSIÓN TMDB
 function updateModalWithStreamingInfo(streamingData) {
-    console.log('🎬 Procesando datos de streaming TMDB:', streamingData);
-    
     let platformsHTML = '';
     
     // Priorizamos AR (Argentina) y usamos US (EE. UU.) como respaldo
     const countryData = streamingData.AR || streamingData.US; 
     
     if (countryData) {
-        const countryName = streamingData.AR ? 'Argentina' : 'EE. UU.';
+        const countryName = streamingData.AR ? 'Argentina' : (streamingData.US ? 'EE. UU. (Fallback)' : 'Región no definida');
         
         platformsHTML = `
             <h3 class="platforms-title">🎬 Disponibilidad en Streaming (${countryName})</h3>
@@ -261,7 +246,7 @@ function updateModalWithStreamingInfo(streamingData) {
                     
                     platformsHTML += `
                         <div class="platform-item">
-                            <div class="platform-logo">${platformName.substring(0, 2)}</div>
+                            <div class="platform-logo">${platformName.substring(0, 2).toUpperCase()}</div>
                             <div class="platform-name">${platformName}</div>
                             <div class="platform-type">${type.toUpperCase()}</div>
                             <div class="availability-badge ${typeClass}">
@@ -290,9 +275,9 @@ function updateModalWithStreamingInfo(streamingData) {
         platformsHTML = `
             <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
             <div style="text-align: center; padding: 20px;">
-                <p>🔍 Información limitada</p>
+                <p>🔍 Información no disponible</p>
                 <p style="font-size: 0.9rem; color: var(--gray-color); margin-top: 10px;">
-                    No hay información detallada de streaming disponible para Argentina o EE. UU.
+                    No hay información detallada de streaming para Argentina o EE. UU.
                 </p>
             </div>
         `;
@@ -314,23 +299,25 @@ function updateModalWithStreamingInfo(streamingData) {
 }
 
 
-// Mostrar detalles de película/serie
-async function showMovieDetails(imdbID, type, title = '') {
+// Mostrar detalles de película/serie (Ahora usa TMDB ID)
+async function showMovieDetails(id, type) {
     detailContainer.innerHTML = '<div class="loading">Cargando detalles...</div>';
     movieModal.style.display = 'block';
+    
+    const mediaType = type === 'movie' ? 'movie' : 'tv';
 
     try {
-        // Cargar detalles básicos de OMDb
-        const detailsUrl = `${OMDB_API_BASE_URL}?apikey=${OMDB_API_KEY}&i=${imdbID}&plot=full`;
+        // Cargar detalles básicos de TMDB
+        const detailsUrl = `${TMDB_BASE_URL}/${mediaType}/${id}?api_key=${TMDB_API_KEY}&language=es-ES&append_to_response=credits,external_ids,ratings`;
         const detailsResponse = await fetch(detailsUrl);
         const details = await detailsResponse.json();
 
-        if (details.Response === 'True') {
-            displayMovieDetails(details, type);
+        if (details.id) {
+            displayMovieDetails(details, mediaType);
             
-            // Cargar información de streaming (AHORA CON TMDB)
+            // Cargar información de streaming
             try {
-                const streamingData = await getStreamingInfo(imdbID, details.Title, details.Type);
+                const streamingData = await getStreamingInfo(id, mediaType);
                 updateModalWithStreamingInfo(streamingData);
             } catch (streamingError) {
                 console.error('Error al cargar información de streaming:', streamingError);
@@ -345,69 +332,47 @@ async function showMovieDetails(imdbID, type, title = '') {
     }
 }
 
-// Mostrar error de streaming
-function showStreamingError(errorMessage = '') {
-    const errorHTML = `
-        <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
-        <div style="text-align: center; padding: 20px; background: #333; border-radius: 8px;">
-            <p style="color: #e50914; font-weight: bold;">⚠️ Información limitada (TMDB)</p>
-            <p style="font-size: 0.9rem; color: #ccc; margin-top: 10px;">
-                No se pudo cargar información detallada de streaming.
-            </p>
-            ${errorMessage ? `<p style="font-size: 0.8rem; color: #999; margin-top: 5px;">Error técnico: ${errorMessage}</p>` : ''}
-            
-            <div style="margin-top: 15px; padding: 15px; background: #222; border-radius: 5px;">
-                <p style="font-size: 0.9rem; color: #fff; font-weight: bold;">💡 ¿Por qué pasa esto?</p>
-                <ul style="text-align: left; font-size: 0.8rem; color: #ccc; margin-top: 10px; padding-left: 20px;">
-                    <li>TMDB no encontró el ID de streaming para esta película.</li>
-                    <li>No hay proveedores de *streaming* definidos para la región (AR/US).</li>
-                    <li>Puede ser contenido muy reciente o muy antiguo.</li>
-                </ul>
-            </div>
-            
-            <div style="margin-top: 15px; padding: 10px; background: #1a1a1a; border-radius: 5px;">
-                <p style="font-size: 0.8rem; color: #46d369;">🎯 <strong>Prueba con:</strong></p>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 5px;">
-                    "Avengers: Endgame", "Stranger Things", "The Batman"
-                </p>
-            </div>
-        </div>
-    `;
-    
-    const platformsSection = document.querySelector('.platforms-section');
-    if (platformsSection) {
-        platformsSection.innerHTML = errorHTML;
-    } else {
-        const detailInfo = document.querySelector('.detail-info');
-        if (detailInfo) {
-            const newPlatformsSection = document.createElement('div');
-            newPlatformsSection.className = 'platforms-section';
-            newPlatformsSection.innerHTML = errorHTML;
-            detailInfo.appendChild(newPlatformsSection);
-        }
-    }
-}
-
-// Mostrar detalles de película/serie en el modal
+// Mostrar detalles de película/serie en el modal (Adaptado a TMDB)
 function displayMovieDetails(details, type) {
-    const poster = details.Poster !== 'N/A' ? details.Poster : PLACEHOLDER_IMAGE;
-    const mediaType = details.Type === 'movie' ? 'Película' : 'Serie';
+    const mediaTypeDisplay = type === 'movie' ? 'Película' : 'Serie';
+    
+    // TMDB Poster
+    const poster = details.poster_path ? TMDB_IMAGE_BASE_URL + details.poster_path : PLACEHOLDER_IMAGE;
+    
+    // TMDB Meta
+    const year = (type === 'movie' ? details.release_date : details.first_air_date) ? (type === 'movie' ? details.release_date.substring(0, 4) : details.first_air_date.substring(0, 4)) : 'N/A';
+    const runtime = type === 'movie' ? (details.runtime ? `${details.runtime} min` : 'N/A') : (details.episode_run_time && details.episode_run_time.length > 0 ? `${details.episode_run_time[0]} min` : 'N/A');
+    const title = details.title || details.name;
+    const overview = details.overview || 'No hay sinopsis disponible.';
 
-    // Procesar ratings
+    // TMDB Ratings (usa vote_average)
     let ratingsHTML = '';
-    if (details.Ratings && details.Ratings.length > 0) {
-        ratingsHTML = details.Ratings.map(rating => `
+    if (details.vote_average) {
+        ratingsHTML = `
             <div class="detail-rating">
                 <span class="star">★</span>
-                <span>${rating.Value}</span>
-                <span class="rating-source">(${rating.Source})</span>
+                <span>${details.vote_average.toFixed(1)} / 10</span>
+                <span class="rating-source">(TMDB)</span>
             </div>
-        `).join('');
+        `;
     } else {
         ratingsHTML = '<div class="detail-rating">No hay calificaciones disponibles</div>';
     }
-
-    // Sección de plataformas (se actualizará con TMDB)
+    
+    // TMDB Genre
+    const genres = details.genres && details.genres.length > 0 ? details.genres.map(g => g.name).join(', ') : 'N/A';
+    
+    // TMDB Director/Creators
+    const credits = details.credits || {};
+    const crew = credits.crew || [];
+    const director = type === 'movie' ? crew.find(member => member.job === 'Director') : crew.find(member => member.job === 'Executive Producer');
+    const directorName = director ? director.name : 'N/A';
+    
+    // TMDB Actors (Cast)
+    const cast = credits.cast || [];
+    const actorsList = cast.slice(0, 5).map(actor => actor.name).join(', ') || 'N/A';
+    
+    // Sección de plataformas (se actualizará después)
     const platformsHTML = `
         <div class="platforms-section">
             <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
@@ -422,31 +387,31 @@ function displayMovieDetails(details, type) {
 
     detailContainer.innerHTML = `
         <div class="detail-poster">
-            <img src="${poster}" alt="${details.Title}" 
+            <img src="${poster}" alt="${title}" 
                  onerror="this.src='${PLACEHOLDER_IMAGE}'">
         </div>
         <div class="detail-info">
-            <h1 class="detail-title">${details.Title}</h1>
+            <h1 class="detail-title">${title}</h1>
             <div class="detail-meta">
-                <span class="meta-item">${details.Year}</span>
-                <span class="meta-item">${mediaType}</span>
-                <span class="meta-item">${details.Runtime || 'N/A'}</span>
-                <span class="meta-item">${details.Rated || 'N/A'}</span>
+                <span class="meta-item">${year}</span>
+                <span class="meta-item">${mediaTypeDisplay}</span>
+                <span class="meta-item">${runtime}</span>
+                <span class="meta-item">${details.tagline || details.status || 'N/A'}</span>
             </div>
             
             <div class="detail-info-item">
                 <span class="detail-info-label">Género:</span>
-                <span class="detail-info-content">${details.Genre || 'N/A'}</span>
+                <span class="detail-info-content">${genres}</span>
             </div>
             
             <div class="detail-info-item">
-                <span class="detail-info-label">Director:</span>
-                <span class="detail-info-content">${details.Director || 'N/A'}</span>
+                <span class="detail-info-label">${type === 'movie' ? 'Director' : 'Creador'}:</span>
+                <span class="detail-info-content">${directorName}</span>
             </div>
             
             <div class="detail-info-item">
                 <span class="detail-info-label">Reparto:</span>
-                <span class="detail-info-content">${details.Actors || 'N/A'}</span>
+                <span class="detail-info-content">${actorsList}</span>
             </div>
             
             <div class="detail-info-item">
@@ -456,7 +421,7 @@ function displayMovieDetails(details, type) {
             
             <div class="detail-overview">
                 <h3>Sinopsis</h3>
-                <p>${details.Plot || 'No hay sinopsis disponible.'}</p>
+                <p>${overview}</p>
             </div>
             
             ${platformsHTML}
@@ -464,75 +429,63 @@ function displayMovieDetails(details, type) {
     `;
 }
 
-// Mostrar resultados de actores
-function displayActorResults(results, actorName) {
-    resultsContainer.innerHTML = '';
+// Lógica de Actores con TMDB
 
-    const actorResults = [
-        {
-            id: 1,
-            name: actorName,
-            knownFor: 'Actor/Actriz',
-            popularity: 'Alta',
-            photo: PLACEHOLDER_IMAGE,
-            movies: results.slice(0, 6)
-        }
-    ];
-
-    actorResults.forEach(actor => {
-        const actorCard = document.createElement('div');
-        actorCard.className = 'actor-card';
-        
-        actorCard.innerHTML = `
-            <img src="${actor.photo}" alt="${actor.name}" class="actor-photo">
-            <div class="actor-info">
-                <h3 class="actor-name">${actor.name}</h3>
-                <div class="actor-known-for">${actor.knownFor}</div>
-                <div class="actor-role">Popularidad: ${actor.popularity}</div>
-                <div class="actor-role">Conocido por: ${actor.movies.map(m => m.Title).join(', ')}</div>
-            </div>
-        `;
-
-        actorCard.addEventListener('click', () => {
-            showActorDetails(actor, actor.movies);
-        });
-
-        resultsContainer.appendChild(actorCard);
-    });
-}
-
-// Mostrar detalles de actor
-function showActorDetails(actor, filmography) {
+// Mostrar detalles de actor (Ahora usa TMDB ID)
+async function showActorDetails(id, name) {
     detailContainer.innerHTML = '<div class="loading">Cargando detalles del actor...</div>';
     movieModal.style.display = 'block';
 
-    const actorDetails = {
-        name: actor.name,
-        bio: `${actor.name} es un actor conocido por sus papeles en diversas producciones cinematográficas y televisivas.`,
-        birthDate: 'Información no disponible',
-        birthPlace: 'Información no disponible',
-        popularity: 'Alta',
-        knownFor: actor.knownFor,
-        moviesCount: filmography.length
-    };
+    try {
+        const detailsUrl = `${TMDB_BASE_URL}/person/${id}?api_key=${TMDB_API_KEY}&language=es-ES`;
+        const creditsUrl = `${TMDB_BASE_URL}/person/${id}/combined_credits?api_key=${TMDB_API_KEY}&language=es-ES`;
 
-    displayActorDetails(actorDetails, filmography);
+        const [detailsResponse, creditsResponse] = await Promise.all([
+            fetch(detailsUrl),
+            fetch(creditsUrl)
+        ]);
+
+        const details = await detailsResponse.json();
+        const credits = await creditsResponse.json();
+
+        if (details.id) {
+            displayActorDetails(details, credits);
+        } else {
+            detailContainer.innerHTML = '<div class="error">Error al cargar los detalles del actor</div>';
+        }
+    } catch (error) {
+        console.error('Error al cargar detalles del actor:', error);
+        detailContainer.innerHTML = '<div class="error">Error al cargar los detalles del actor</div>';
+    }
 }
 
-// Mostrar detalles del actor en el modal
-function displayActorDetails(actor, filmography) {
-    const photo = PLACEHOLDER_IMAGE;
+// Mostrar detalles del actor en el modal (Adaptado a TMDB)
+function displayActorDetails(actor, credits) {
+    const photo = actor.profile_path ? TMDB_IMAGE_BASE_URL + actor.profile_path : PLACEHOLDER_IMAGE;
 
-    const filmographyHTML = filmography.map(movie => `
-        <div class="filmography-item" onclick="showMovieDetails('${movie.imdbID}', '${movie.Type}', '${movie.Title}')">
-            <img src="${movie.Poster !== 'N/A' ? movie.Poster : PLACEHOLDER_IMAGE}" 
-                 alt="${movie.Title}" class="filmography-poster">
-            <div class="filmography-info">
-                <div class="filmography-name">${movie.Title}</div>
-                <div class="filmography-year">${movie.Year}</div>
+    const filmography = credits.cast
+        .sort((a, b) => new Date(b.release_date || b.first_air_date) - new Date(a.release_date || a.first_air_date))
+        .slice(0, 15);
+    
+    const filmographyHTML = filmography.map(item => {
+        const mediaType = item.media_type;
+        const year = (mediaType === 'movie' ? item.release_date : item.first_air_date) ? 
+                     (mediaType === 'movie' ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
+        const title = item.title || item.name;
+        const poster = item.poster_path ? TMDB_IMAGE_BASE_URL + item.poster_path : PLACEHOLDER_IMAGE;
+
+        return `
+            <div class="filmography-item" onclick="showMovieDetails('${item.id}', '${mediaType}')">
+                <img src="${poster}" 
+                     alt="${title}" class="filmography-poster"
+                     onerror="this.src='${PLACEHOLDER_IMAGE}'">
+                <div class="filmography-info">
+                    <div class="filmography-name">${title}</div>
+                    <div class="filmography-year">${year} (${mediaType === 'movie' ? 'P' : 'S'})</div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     detailContainer.innerHTML = `
         <div class="detail-poster">
@@ -543,36 +496,36 @@ function displayActorDetails(actor, filmography) {
             
             <div class="actor-stats">
                 <div class="stat-item">
-                    <span class="stat-value">${actor.moviesCount}</span>
-                    <span class="stat-label">Películas/Series</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">${actor.popularity}</span>
+                    <span class="stat-value">${actor.popularity.toFixed(1)}</span>
                     <span class="stat-label">Popularidad</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">${actor.knownFor}</span>
+                    <span class="stat-value">${actor.known_for_department || 'N/A'}</span>
                     <span class="stat-label">Conocido por</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">${credits.cast.length}</span>
+                    <span class="stat-label">Títulos</span>
                 </div>
             </div>
             
             <div class="actor-bio">
                 <h3>Biografía</h3>
-                <p>${actor.bio}</p>
+                <p>${actor.biography || 'No hay biografía disponible en español.'}</p>
             </div>
             
             <div class="detail-info-item">
                 <span class="detail-info-label">Fecha de nacimiento:</span>
-                <span class="detail-info-content">${actor.birthDate}</span>
+                <span class="detail-info-content">${actor.birthday || 'N/A'}</span>
             </div>
             
             <div class="detail-info-item">
                 <span class="detail-info-label">Lugar de nacimiento:</span>
-                <span class="detail-info-content">${actor.birthPlace}</span>
+                <span class="detail-info-content">${actor.place_of_birth || 'N/A'}</span>
             </div>
             
             <div class="actor-filmography">
-                <h3 class="filmography-title">Filmografía</h3>
+                <h3 class="filmography-title">Filmografía Destacada</h3>
                 <div class="filmography-grid">
                     ${filmographyHTML}
                 </div>
@@ -581,9 +534,9 @@ function displayActorDetails(actor, filmography) {
     `;
 }
 
-// Paginación
-function displayPagination(totalResults, currentPage) {
-    const totalPages = Math.ceil(totalResults / 10);
+
+// Paginación (Adaptada para TMDB)
+function displayPagination(totalResults, currentPage, totalPages) {
     paginationContainer.innerHTML = '';
 
     if (totalPages <= 1) return;
@@ -595,11 +548,7 @@ function displayPagination(totalResults, currentPage) {
     prevButton.addEventListener('click', () => {
         if (currentPage > 1) {
             currentPage--;
-            if (currentSearchType === 'actor') {
-                searchActors(currentSearchQuery, currentPage);
-            } else {
-                searchMoviesAndSeries(currentSearchQuery, currentPage);
-            }
+            searchWithTMDB(currentSearchQuery, currentPage);
         }
     });
     paginationContainer.appendChild(prevButton);
@@ -613,11 +562,7 @@ function displayPagination(totalResults, currentPage) {
         pageButton.textContent = i;
         pageButton.addEventListener('click', () => {
             currentPage = i;
-            if (currentSearchType === 'actor') {
-                searchActors(currentSearchQuery, currentPage);
-            } else {
-                searchMoviesAndSeries(currentSearchQuery, currentPage);
-            }
+            searchWithTMDB(currentSearchQuery, currentPage);
         });
         paginationContainer.appendChild(pageButton);
     }
@@ -629,20 +574,16 @@ function displayPagination(totalResults, currentPage) {
     nextButton.addEventListener('click', () => {
         if (currentPage < totalPages) {
             currentPage++;
-            if (currentSearchType === 'actor') {
-                searchActors(currentSearchQuery, currentPage);
-            } else {
-                searchMoviesAndSeries(currentSearchQuery, currentPage);
-            }
+            searchWithTMDB(currentSearchQuery, currentPage);
         }
     });
     paginationContainer.appendChild(nextButton);
 }
 
+
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎬 Buscador de Películas y Series iniciado');
-    console.log('🔑 OMDB Key configurada');
+    console.log('🚀 Usando TMDB como API única para búsqueda y streaming');
     console.log('💡 Consejo: Busca películas populares como "Avengers", "The Batman", "Stranger Things"');
-    console.log('🚀 Usando TMDB para obtener información de streaming');
 });

@@ -122,47 +122,64 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
     resultsContainer.innerHTML = '';
 
     results.forEach(item => {
-        // Ignorar resultados sin tipo de medio (a veces ocurre en búsquedas multi)
-        if (!item.media_type) return;
+        let mediaType = item.media_type;
 
-        const isMovie = item.media_type === 'movie';
-        const isSeries = item.media_type === 'tv';
-        const isActor = item.media_type === 'person';
+        // **CORRECCIÓN CRUCIAL:** Si media_type falta (pasa en búsquedas específicas como /search/movie)
+        if (!mediaType) {
+            if (currentSearchType === 'movie') mediaType = 'movie';
+            else if (currentSearchType === 'series') mediaType = 'tv';
+            else if (currentSearchType === 'actor') mediaType = 'person';
+            else return; // Si estamos en 'all' y falta, lo ignoramos.
+        }
+        
+        const isMovie = mediaType === 'movie';
+        const isSeries = mediaType === 'tv';
+        const isActor = mediaType === 'person';
+        
+        // Ignorar tipos que no podemos renderizar (e.g., collections)
+        if (!isMovie && !isSeries && !isActor) return; 
 
         let title = item.title || item.name;
-        let year = (isMovie ? item.release_date : item.first_air_date) ? (isMovie ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
-        let posterPath = item.poster_path || item.profile_path;
-        let cardType = isActor ? 'actor-card' : 'movie-card';
-        let imageClass = isActor ? 'actor-photo' : 'movie-poster';
-        let infoClass = isActor ? 'actor-info' : 'movie-info';
         
+        let posterPath = item.poster_path || item.profile_path; // Usar profile_path para actores
         const poster = posterPath ? TMDB_IMAGE_BASE_URL + posterPath : PLACEHOLDER_IMAGE;
 
         const card = document.createElement('div');
-        card.className = cardType;
-        
-        if (isActor) {
-             const knownFor = item.known_for_department || 'Conocido por';
-             const popularFor = item.known_for && item.known_for.length > 0 ? 
-                                item.known_for.slice(0, 2).map(m => m.title || m.name).join(', ') : 'N/A';
 
-             card.innerHTML = `
-                <img src="${poster}" alt="${title}" class="${imageClass}" 
+        // Lógica de rendering específica para cada tipo
+        if (isActor) {
+            const knownFor = item.known_for_department || 'Conocido por';
+            const popularFor = item.known_for && item.known_for.length > 0 ? 
+                               item.known_for.slice(0, 2).map(m => m.title || m.name).join(', ') : 'N/A';
+            
+            card.className = 'actor-card';
+
+            card.innerHTML = `
+                <img src="${poster}" alt="${title}" class="actor-photo" 
                     onerror="this.src='${PLACEHOLDER_IMAGE}'">
-                <div class="${infoClass}">
+                <div class="actor-info">
                     <h3 class="actor-name">${title}</h3>
                     <div class="actor-known-for">${knownFor}</div>
                     <div class="actor-role">Pop. ${item.popularity.toFixed(0)} | Por: ${popularFor}</div>
                 </div>
             `;
-        } else {
+            
+            card.addEventListener('click', () => {
+                showActorDetails(item.id, item.name);
+            });
+            
+        } else if (isMovie || isSeries) {
+            
+            let year = (isMovie ? item.release_date : item.first_air_date) ? (isMovie ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
             const mediaTypeDisplay = isMovie ? 'Película' : 'Serie';
             const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
+            
+            card.className = 'movie-card';
 
             card.innerHTML = `
-                <img src="${poster}" alt="${title}" class="${imageClass}" 
+                <img src="${poster}" alt="${title}" class="movie-poster" 
                     onerror="this.src='${PLACEHOLDER_IMAGE}'">
-                <div class="${infoClass}">
+                <div class="movie-info">
                     <h3 class="movie-title">${title}</h3>
                     <div class="movie-year">${year} • ${mediaTypeDisplay}</div>
                     <div class="movie-rating">
@@ -171,15 +188,12 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
                     </div>
                 </div>
             `;
+            
+            card.addEventListener('click', () => {
+                showMovieDetails(item.id, mediaType);
+            });
+            
         }
-
-        card.addEventListener('click', () => {
-            if (isActor) {
-                showActorDetails(item.id, item.name);
-            } else {
-                showMovieDetails(item.id, item.media_type);
-            }
-        });
 
         resultsContainer.appendChild(card);
     });
@@ -336,11 +350,11 @@ function showStreamingError(errorMessage = '') {
     const errorHTML = `
         <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
         <div style="text-align: center; padding: 20px; background: #333; border-radius: 8px;">
-            <p style="color: #e50914; font-weight: bold;">⚠️ Información limitada (TMDB)</p>
+            <p style="color: var(--primary-color); font-weight: bold;">⚠️ Información limitada (TMDB)</p>
             <p style="font-size: 0.9rem; color: #ccc; margin-top: 10px;">
                 No se pudo cargar información detallada de streaming.
             </p>
-            ${errorMessage ? `<p style="font-size: 0.8rem; color: #999; margin-top: 5px;">Error técnico: ${errorMessage}</p>` : ''}
+            ${errorMessage ? `<p style="font-size: 0.8rem; color: var(--gray-color); margin-top: 5px;">Error técnico: ${errorMessage}</p>` : ''}
             
             <div style="margin-top: 15px; padding: 15px; background: #222; border-radius: 5px;">
                 <p style="font-size: 0.9rem; color: #fff; font-weight: bold;">💡 ¿Por qué pasa esto?</p>
@@ -352,8 +366,8 @@ function showStreamingError(errorMessage = '') {
             </div>
             
             <div style="margin-top: 15px; padding: 10px; background: #1a1a1a; border-radius: 5px;">
-                <p style="font-size: 0.8rem; color: #46d369;">🎯 <strong>Prueba con:</strong></p>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 5px;">
+                <p style="font-size: 0.8rem; color: var(--success-color);">🎯 <strong>Prueba con:</strong></p>
+                <p style="font-size: 0.7rem; color: var(--gray-color); margin-top: 5px;">
                     "Avengers: Endgame", "Stranger Things", "The Batman"
                 </p>
             </div>

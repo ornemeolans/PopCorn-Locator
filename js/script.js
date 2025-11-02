@@ -1,7 +1,10 @@
 // Configuración de APIs
-const TMDB_API_KEY = 'd06b9cae7dc7f8b3e3b9b3c449f757e6'; 
+const TMDB_API_KEY = 'd06b9cae7dc7f8b3e3b9b3c449f757e6'; // Clave TMDB
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-// OMDB ya no es necesario
+// OMDb ya no es necesario
+
+// Base URL para imágenes de TMDB
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
 // Elementos del DOM
 const searchInput = document.querySelector('.search-input');
@@ -20,9 +23,6 @@ let currentPage = 1;
 let totalResults = 0;
 let currentSearchQuery = '';
 let isLoading = false;
-
-// Base URL para imágenes de TMDB
-const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 
 // Placeholder para imágenes
 const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRkZGIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiPk5vIEltYWdlPC9icj5BdmFpbGFibGU8L3RleHQ+Cjwvc3ZnPg==';
@@ -79,11 +79,13 @@ async function searchWithTMDB(query, page = 1) {
     isLoading = true;
     resultsContainer.innerHTML = '<div class="loading">Buscando...</div>';
     
-    let url = `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&language=es-ES`;
+    let url;
     let typeFilter = currentSearchType;
     
     // Si la búsqueda no es 'all', usamos endpoints específicos para mejor precisión
-    if (typeFilter === 'movie' || typeFilter === 'series' || typeFilter === 'actor') {
+    if (typeFilter === 'all') {
+        url = `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&language=es-ES`;
+    } else {
         let tmdbType = typeFilter === 'series' ? 'tv' : typeFilter === 'actor' ? 'person' : 'movie';
         url = `${TMDB_BASE_URL}/search/${tmdbType}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&language=es-ES`;
     }
@@ -94,14 +96,11 @@ async function searchWithTMDB(query, page = 1) {
         
         if (data.results && data.results.length > 0) {
             
-            // Filtramos el resultado 'multi' para ser más precisos si es necesario
             let filteredResults = data.results;
-            if (currentSearchType === 'movie') {
-                filteredResults = data.results.filter(item => item.media_type === 'movie');
-            } else if (currentSearchType === 'series') {
-                filteredResults = data.results.filter(item => item.media_type === 'tv');
-            } else if (currentSearchType === 'actor') {
-                filteredResults = data.results.filter(item => item.media_type === 'person');
+            // Filtramos el resultado 'multi' para ser más precisos si es necesario
+            if (currentSearchType === 'all') {
+                 // Filtramos gente en la búsqueda 'all' para no mezclar si el filtro no está activo
+                 filteredResults = data.results.filter(item => item.media_type !== 'person');
             }
             
             displayTMDBResults(filteredResults, data.total_results, data.total_pages, page);
@@ -308,7 +307,7 @@ async function showMovieDetails(id, type) {
 
     try {
         // Cargar detalles básicos de TMDB
-        const detailsUrl = `${TMDB_BASE_URL}/${mediaType}/${id}?api_key=${TMDB_API_KEY}&language=es-ES&append_to_response=credits,external_ids,ratings`;
+        const detailsUrl = `${TMDB_BASE_URL}/${mediaType}/${id}?api_key=${TMDB_API_KEY}&language=es-ES&append_to_response=credits,external_ids`;
         const detailsResponse = await fetch(detailsUrl);
         const details = await detailsResponse.json();
 
@@ -329,6 +328,49 @@ async function showMovieDetails(id, type) {
     } catch (error) {
         console.error('Error al cargar detalles:', error);
         detailContainer.innerHTML = '<div class="error">Error al cargar los detalles</div>';
+    }
+}
+
+// Mostrar error de streaming
+function showStreamingError(errorMessage = '') {
+    const errorHTML = `
+        <h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3>
+        <div style="text-align: center; padding: 20px; background: #333; border-radius: 8px;">
+            <p style="color: #e50914; font-weight: bold;">⚠️ Información limitada (TMDB)</p>
+            <p style="font-size: 0.9rem; color: #ccc; margin-top: 10px;">
+                No se pudo cargar información detallada de streaming.
+            </p>
+            ${errorMessage ? `<p style="font-size: 0.8rem; color: #999; margin-top: 5px;">Error técnico: ${errorMessage}</p>` : ''}
+            
+            <div style="margin-top: 15px; padding: 15px; background: #222; border-radius: 5px;">
+                <p style="font-size: 0.9rem; color: #fff; font-weight: bold;">💡 ¿Por qué pasa esto?</p>
+                <ul style="text-align: left; font-size: 0.8rem; color: #ccc; margin-top: 10px; padding-left: 20px;">
+                    <li>TMDB no encontró el ID de streaming para esta película.</li>
+                    <li>No hay proveedores de *streaming* definidos para la región (AR/US).</li>
+                    <li>Puede ser contenido muy reciente o muy antiguo.</li>
+                </ul>
+            </div>
+            
+            <div style="margin-top: 15px; padding: 10px; background: #1a1a1a; border-radius: 5px;">
+                <p style="font-size: 0.8rem; color: #46d369;">🎯 <strong>Prueba con:</strong></p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 5px;">
+                    "Avengers: Endgame", "Stranger Things", "The Batman"
+                </p>
+            </div>
+        </div>
+    `;
+    
+    const platformsSection = document.querySelector('.platforms-section');
+    if (platformsSection) {
+        platformsSection.innerHTML = errorHTML;
+    } else {
+        const detailInfo = document.querySelector('.detail-info');
+        if (detailInfo) {
+            const newPlatformsSection = document.createElement('div');
+            newPlatformsSection.className = 'platforms-section';
+            newPlatformsSection.innerHTML = errorHTML;
+            detailInfo.appendChild(newPlatformsSection);
+        }
     }
 }
 
@@ -429,7 +471,9 @@ function displayMovieDetails(details, type) {
     `;
 }
 
-// Lógica de Actores con TMDB
+// ********************************************
+// * Lógica de Actores con TMDB (Filmografía Completa) *
+// ********************************************
 
 // Mostrar detalles de actor (Ahora usa TMDB ID)
 async function showActorDetails(id, name) {
@@ -438,6 +482,7 @@ async function showActorDetails(id, name) {
 
     try {
         const detailsUrl = `${TMDB_BASE_URL}/person/${id}?api_key=${TMDB_API_KEY}&language=es-ES`;
+        // Este endpoint devuelve todas las películas/series del actor
         const creditsUrl = `${TMDB_BASE_URL}/person/${id}/combined_credits?api_key=${TMDB_API_KEY}&language=es-ES`;
 
         const [detailsResponse, creditsResponse] = await Promise.all([
@@ -463,19 +508,22 @@ async function showActorDetails(id, name) {
 function displayActorDetails(actor, credits) {
     const photo = actor.profile_path ? TMDB_IMAGE_BASE_URL + actor.profile_path : PLACEHOLDER_IMAGE;
 
+    // Filtramos y ordenamos la filmografía (SOLUCIÓN AL REQUERIMIENTO DEL USUARIO)
     const filmography = credits.cast
-        .sort((a, b) => new Date(b.release_date || b.first_air_date) - new Date(a.release_date || a.first_air_date))
-        .slice(0, 15);
-    
+        .filter(item => item.media_type === 'movie' || item.media_type === 'tv') // Solo películas y series
+        .sort((a, b) => new Date(b.release_date || b.first_air_date) - new Date(a.release_date || a.first_air_date)) // Ordenar por fecha
+        .slice(0, 30); // Mostrar solo las 30 más recientes para no saturar
+
     const filmographyHTML = filmography.map(item => {
         const mediaType = item.media_type;
         const year = (mediaType === 'movie' ? item.release_date : item.first_air_date) ? 
                      (mediaType === 'movie' ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
         const title = item.title || item.name;
         const poster = item.poster_path ? TMDB_IMAGE_BASE_URL + item.poster_path : PLACEHOLDER_IMAGE;
-
+        
+        // El click llama a showMovieDetails con el ID de TMDB y el tipo
         return `
-            <div class="filmography-item" onclick="showMovieDetails('${item.id}', '${mediaType}')">
+            <div class="filmography-item" onclick="showMovieDetails(${item.id}, '${mediaType}')">
                 <img src="${poster}" 
                      alt="${title}" class="filmography-poster"
                      onerror="this.src='${PLACEHOLDER_IMAGE}'">
@@ -505,7 +553,7 @@ function displayActorDetails(actor, credits) {
                 </div>
                 <div class="stat-item">
                     <span class="stat-value">${credits.cast.length}</span>
-                    <span class="stat-label">Títulos</span>
+                    <span class="stat-label">Títulos totales</span>
                 </div>
             </div>
             
@@ -533,7 +581,6 @@ function displayActorDetails(actor, credits) {
         </div>
     `;
 }
-
 
 // Paginación (Adaptada para TMDB)
 function displayPagination(totalResults, currentPage, totalPages) {

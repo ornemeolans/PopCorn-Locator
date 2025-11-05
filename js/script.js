@@ -46,8 +46,8 @@ filterButtons.forEach(button => {
             currentPage = 1;
             performSearch();
         } else if (!isLoading) {
-             // Si no hay query, pero se cambia el filtro, cargamos populares de nuevo
-             // O simplemente no hacemos nada para no sobrecargar la API al cambiar filtros vacíos
+            // Si no hay query, pero se cambia el filtro, cargamos populares de nuevo
+            // O simplemente no hacemos nada para no sobrecargar la API al cambiar filtros vacíos
         }
     });
 });
@@ -119,7 +119,7 @@ function performSearch() {
     resultsContainer.innerHTML = '<div class="loading">Buscando...</div>';
     searchInfo.innerHTML = '';
     paginationContainer.innerHTML = '';
-    
+
     // Ahora todo usa TMDB
     searchWithTMDB(query, currentPage);
 }
@@ -127,13 +127,13 @@ function performSearch() {
 // Búsqueda unificada con TMDB
 async function searchWithTMDB(query, page = 1) {
     if (isLoading) return;
-    
+
     isLoading = true;
     resultsContainer.innerHTML = '<div class="loading">Buscando...</div>';
-    
+
     let url;
     let typeFilter = currentSearchType;
-    
+
     // Si la búsqueda no es 'all', usamos endpoints específicos para mejor precisión
     if (typeFilter === 'all') {
         url = `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=${page}&language=es-ES`;
@@ -145,16 +145,16 @@ async function searchWithTMDB(query, page = 1) {
     try {
         const response = await fetch(url);
         const data = await response.json();
-        
+
         if (data.results && data.results.length > 0) {
-            
+
             let filteredResults = data.results;
             // Filtramos el resultado 'multi' para ser más precisos si es necesario
             if (currentSearchType === 'all') {
-                 // Filtramos gente en la búsqueda 'all' para no mezclar si el filtro no está activo
-                 filteredResults = data.results.filter(item => item.media_type !== 'person');
+                // Filtramos gente en la búsqueda 'all' para no mezclar si el filtro no está activo
+                filteredResults = data.results.filter(item => item.media_type !== 'person');
             }
-            
+
             displayTMDBResults(filteredResults, data.total_results, data.total_pages, page);
             totalResults = data.total_results;
             searchInfo.innerHTML = `<p>Mostrando ${filteredResults.length} resultados para: <strong>"${query}"</strong></p>`;
@@ -183,16 +183,16 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
             else if (currentSearchType === 'actor') mediaType = 'person';
             else return; // Si estamos en 'all' y falta, lo ignoramos.
         }
-        
+
         const isMovie = mediaType === 'movie';
         const isSeries = mediaType === 'tv';
         const isActor = mediaType === 'person';
-        
+
         // Ignorar tipos que no podemos renderizar (e.g., collections)
-        if (!isMovie && !isSeries && !isActor) return; 
+        if (!isMovie && !isSeries && !isActor) return;
 
         let title = item.title || item.name;
-        
+
         let posterPath = item.poster_path || item.profile_path; // Usar profile_path para actores
         const poster = posterPath ? TMDB_IMAGE_BASE_URL + posterPath : PLACEHOLDER_IMAGE;
 
@@ -201,9 +201,9 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
         // Lógica de rendering específica para cada tipo
         if (isActor) {
             const knownFor = item.known_for_department || 'Conocido por';
-            const popularFor = item.known_for && item.known_for.length > 0 ? 
-                               item.known_for.slice(0, 2).map(m => m.title || m.name).join(', ') : 'N/A';
-            
+            const popularFor = item.known_for && item.known_for.length > 0 ?
+                item.known_for.slice(0, 2).map(m => m.title || m.name).join(', ') : 'N/A';
+
             card.className = 'actor-card';
 
             card.innerHTML = `
@@ -215,17 +215,17 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
                     <div class="actor-role">Pop. ${item.popularity.toFixed(0)} | Por: ${popularFor}</div>
                 </div>
             `;
-            
+
             card.addEventListener('click', () => {
                 showActorDetails(item.id, item.name);
             });
-            
+
         } else if (isMovie || isSeries) {
-            
+
             let year = (isMovie ? item.release_date : item.first_air_date) ? (isMovie ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
             const mediaTypeDisplay = isMovie ? 'Película' : 'Serie';
             const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
-            
+
             card.className = 'movie-card';
 
             card.innerHTML = `
@@ -240,16 +240,16 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
                     </div>
                 </div>
             `;
-            
+
             card.addEventListener('click', () => {
                 showMovieDetails(item.id, mediaType);
             });
-            
+
         }
 
         resultsContainer.appendChild(card);
     });
-    
+
     // Solo mostrar paginación si no es la carga inicial de populares
     if (!isInitialLoad && totalPages > 1) {
         displayPagination(totalResults, currentPage, totalPages);
@@ -266,13 +266,13 @@ function displayTMDBResults(results, totalResults, totalPages, currentPage) {
 async function getStreamingInfo(id, type) {
     const mediaType = type === 'movie' ? 'movie' : 'tv';
     const providersUrl = `${TMDB_BASE_URL}/${mediaType}/${id}/watch/providers?api_key=${TMDB_API_KEY}`;
-    
+
     try {
         const providersResponse = await fetch(providersUrl);
         const providersData = await providersResponse.json();
 
         if (providersData.results) {
-            return providersData.results; 
+            return providersData.results;
         }
 
         throw new Error('No hay información de streaming disponible en TMDB.');
@@ -287,18 +287,18 @@ async function getStreamingInfo(id, type) {
 // Actualizar modal con información de streaming - VERSIÓN TMDB
 function updateModalWithStreamingInfo(streamingData) {
     let platformsHTML = '';
-    
+
     // Priorizamos AR (Argentina) y usamos US (EE. UU.) como respaldo
-    const countryData = streamingData.AR || streamingData.US; 
-    
+    const countryData = streamingData.AR || streamingData.US;
+
     if (countryData) {
         const countryName = streamingData.AR ? 'Argentina' : (streamingData.US ? 'EE. UU. (Fallback)' : 'Región no definida');
-        
+
         platformsHTML = `
             <h3 class="platforms-title">🎬 Disponibilidad en Streaming (${countryName})</h3>
             <div class="platforms-grid">
         `;
-        
+
         let hasPlatforms = false;
 
         // Función auxiliar para generar HTML de plataformas
@@ -307,18 +307,18 @@ function updateModalWithStreamingInfo(streamingData) {
                 platformList.forEach(service => {
                     hasPlatforms = true;
                     const platformName = service.provider_name;
-                    
+
                     // Mapeo simple de tipo y clase
                     let typeText = 'SUSCRIPCIÓN';
                     let typeClass = 'availability-stream';
-                    
+
                     if (type === 'rent') { typeText = 'ALQUILER'; typeClass = 'availability-rent'; }
                     if (type === 'buy') { typeText = 'COMPRA'; typeClass = 'availability-buy'; }
-                    
+
                     // URL del logo del proveedor. Usamos w92 para un tamaño optimizado.
                     const logoBaseUrl = 'https://image.tmdb.org/t/p/w92';
-                    const logoUrl = service.logo_path ? logoBaseUrl + service.logo_path : ''; 
-                    
+                    const logoUrl = service.logo_path ? logoBaseUrl + service.logo_path : '';
+
                     // Usamos un contenedor y el onerror para manejar el fallback al texto
                     platformsHTML += `
                         <div class="platform-item">
@@ -343,9 +343,9 @@ function updateModalWithStreamingInfo(streamingData) {
         appendPlatforms(countryData.rent, 'rent');
         // buy (compra)
         appendPlatforms(countryData.buy, 'buy');
-        
+
         platformsHTML += `</div>`;
-        
+
         if (!hasPlatforms) {
             platformsHTML = `<h3 class="platforms-title">🎬 Disponibilidad en Streaming</h3><div class="no-results" style="padding: 20px;">No disponible para streaming, alquiler o compra en la región seleccionada.</div>`;
         }
@@ -361,7 +361,7 @@ function updateModalWithStreamingInfo(streamingData) {
             </div>
         `;
     }
-    
+
     // Actualizar la sección de plataformas
     const platformsSection = document.querySelector('.platforms-section');
     if (platformsSection) {
@@ -382,7 +382,7 @@ function updateModalWithStreamingInfo(streamingData) {
 async function showMovieDetails(id, type) {
     detailContainer.innerHTML = '<div class="loading">Cargando detalles...</div>';
     movieModal.style.display = 'block';
-    
+
     const mediaType = type === 'movie' ? 'movie' : 'tv';
 
     try {
@@ -393,7 +393,7 @@ async function showMovieDetails(id, type) {
 
         if (details.id) {
             displayMovieDetails(details, mediaType);
-            
+
             // Cargar información de streaming
             try {
                 const streamingData = await getStreamingInfo(id, mediaType);
@@ -439,7 +439,7 @@ function showStreamingError(errorMessage = '') {
             </div>
         </div>
     `;
-    
+
     const platformsSection = document.querySelector('.platforms-section');
     if (platformsSection) {
         platformsSection.innerHTML = errorHTML;
@@ -457,10 +457,10 @@ function showStreamingError(errorMessage = '') {
 // Mostrar detalles de película/serie en el modal (Adaptado a TMDB)
 function displayMovieDetails(details, type) {
     const mediaTypeDisplay = type === 'movie' ? 'Película' : 'Serie';
-    
+
     // TMDB Poster
     const poster = details.poster_path ? TMDB_IMAGE_BASE_URL + details.poster_path : PLACEHOLDER_IMAGE;
-    
+
     // TMDB Meta
     const year = (type === 'movie' ? details.release_date : details.first_air_date) ? (type === 'movie' ? details.release_date.substring(0, 4) : details.first_air_date.substring(0, 4)) : 'N/A';
     const runtime = type === 'movie' ? (details.runtime ? `${details.runtime} min` : 'N/A') : (details.episode_run_time && details.episode_run_time.length > 0 ? `${details.episode_run_time[0]} min` : 'N/A');
@@ -480,20 +480,20 @@ function displayMovieDetails(details, type) {
     } else {
         ratingsHTML = '<div class="detail-rating">No hay calificaciones disponibles</div>';
     }
-    
+
     // TMDB Genre
     const genres = details.genres && details.genres.length > 0 ? details.genres.map(g => g.name).join(', ') : 'N/A';
-    
+
     // TMDB Director/Creators
     const credits = details.credits || {};
     const crew = credits.crew || [];
     const director = type === 'movie' ? crew.find(member => member.job === 'Director') : crew.find(member => member.job === 'Executive Producer');
     const directorName = director ? director.name : 'N/A';
-    
+
     // TMDB Actors (Cast)
     const cast = credits.cast || [];
     const actorsList = cast.slice(0, 5).map(actor => actor.name).join(', ') || 'N/A';
-    
+
     // Sección de plataformas (se actualizará después)
     const platformsHTML = `
         <div class="platforms-section">
@@ -596,11 +596,11 @@ function displayActorDetails(actor, credits) {
 
     const filmographyHTML = filmography.map(item => {
         const mediaType = item.media_type;
-        const year = (mediaType === 'movie' ? item.release_date : item.first_air_date) ? 
-                     (mediaType === 'movie' ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
+        const year = (mediaType === 'movie' ? item.release_date : item.first_air_date) ?
+            (mediaType === 'movie' ? item.release_date.substring(0, 4) : item.first_air_date.substring(0, 4)) : 'N/A';
         const title = item.title || item.name;
         const poster = item.poster_path ? TMDB_IMAGE_BASE_URL + item.poster_path : PLACEHOLDER_IMAGE;
-        
+
         // El click llama a showMovieDetails con el ID de TMDB y el tipo
         return `
             <div class="filmography-item" onclick="showMovieDetails(${item.id}, '${mediaType}')">

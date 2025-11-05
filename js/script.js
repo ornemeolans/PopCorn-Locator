@@ -307,6 +307,7 @@ function updateModalWithStreamingInfo(streamingData) {
                 platformList.forEach(service => {
                     hasPlatforms = true;
                     const platformName = service.provider_name;
+                    
                     // Mapeo simple de tipo y clase
                     let typeText = 'SUSCRIPCIÓN';
                     let typeClass = 'availability-stream';
@@ -314,9 +315,14 @@ function updateModalWithStreamingInfo(streamingData) {
                     if (type === 'rent') { typeText = 'ALQUILER'; typeClass = 'availability-rent'; }
                     if (type === 'buy') { typeText = 'COMPRA'; typeClass = 'availability-buy'; }
                     
+                    // NUEVO: URL del logo del proveedor. Usamos w92 para un tamaño optimizado.
+                    const logoBaseUrl = 'https://image.tmdb.org/t/p/w92';
+                    const logoUrl = service.logo_path ? logoBaseUrl + service.logo_path : PLACEHOLDER_IMAGE;
+                    
                     platformsHTML += `
                         <div class="platform-item">
-                            <div class="platform-logo">${platformName.substring(0, 2).toUpperCase()}</div>
+                            <img src="${logoUrl}" alt="${platformName} Logo" class="platform-logo-img" 
+                                onerror="this.src='${PLACEHOLDER_IMAGE}'">
                             <div class="platform-name">${platformName}</div>
                             <div class="platform-type">${type.toUpperCase()}</div>
                             <div class="availability-badge ${typeClass}">

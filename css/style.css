@@ -39,11 +39,41 @@ header {
     border-bottom: 1px solid var(--medium-dark-color);
 }
 
-.logo {
+/* ELIMINADO: .logo original */
+
+/* --- Estilos para el Logo de PopCorn Locator --- */
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Centra el contenido del header */
+    padding-bottom: 20px; /* Añade un poco de espacio debajo del logo */
+    border-bottom: 1px solid var(--medium-dark-color); /* Separador visual */
+    margin-bottom: 20px;
+}
+
+.logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none; /* Quita el subrayado del link */
+    color: var(--light-color); /* Asegura que el texto sea claro */
+}
+
+.logo-svg {
+    width: 40px; /* Tamaño del SVG */
+    height: 40px;
+    margin-right: 10px; /* Espacio entre el SVG y el texto */
+    flex-shrink: 0; /* Evita que el SVG se encoja */
+}
+
+.logo-svg svg {
+    display: block; /* Asegura que el SVG ocupe su contenedor */
+}
+
+.logo-text {
     color: var(--primary-color);
     font-size: 2.2rem;
     font-weight: 700;
-    margin-bottom: 10px;
+    margin: 0; /* Resetea el margen del h1 */
 }
 
 .search-container {
@@ -242,6 +272,7 @@ header {
 @media (min-width: 768px) {
     .detail-container {
         flex-direction: row;
+        align-items: flex-start; /* Alinea la parte superior del póster con el texto */
     }
 }
 
@@ -477,4 +508,230 @@ header {
     background-color: #333;
     color: #666;
     cursor: not-allowed;
+}
+
+/* --- ESTILOS ADICIONALES PARA EL MODAL DE ACTOR --- */
+
+.actor-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* Permite que los ítems se envuelvan en pantallas pequeñas */
+    gap: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 10px;
+    background-color: var(--dark-color);
+    border-radius: 8px;
+    flex: 1 1 auto; /* Permite que los ítems crezcan/encojan */
+    min-width: 80px; /* Evita que se encojan demasiado */
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--gray-color);
+    display: block;
+    margin-top: 5px;
+}
+
+.actor-bio {
+    margin-bottom: 25px;
+    line-height: 1.7;
+}
+
+.actor-bio h3 {
+    margin-bottom: 10px;
+    color: var(--light-color);
+}
+
+.detail-info-item {
+    display: flex;
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+}
+
+.detail-info-label {
+    font-weight: bold;
+    color: var(--gray-color);
+    min-width: 120px;
+    margin-right: 10px;
+}
+
+.detail-info-content {
+    color: var(--light-color);
+}
+
+/* ************************************************* */
+/* * MEDIA QUERIES DE RESPONSIVENESS     * */
+/* ************************************************* */
+
+/* Pantallas Pequeñas (Mobile, max 600px) */
+@media (max-width: 600px) {
+    
+    /* Logo */
+    .header-content {
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+    .logo-svg {
+        width: 30px;
+        height: 30px;
+        margin-right: 8px;
+    }
+    .logo-text {
+        font-size: 1.8rem;
+    }
+    
+    .container {
+        padding: 0 10px; /* Menor padding en pantallas muy pequeñas */
+    }
+
+    /* Header: Apila la barra de búsqueda y los botones */
+    .search-container {
+        flex-wrap: wrap;
+    }
+    
+    .search-input {
+        flex: 1 0 100%; /* Toma todo el ancho */
+        margin-bottom: 10px;
+        border-radius: 8px; /* Esquinas completamente redondeadas */
+    }
+    
+    .search-button, .reset-button { 
+        flex: 1 0 48%; /* Cada botón toma casi la mitad del ancho */
+        padding: 10px;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    /* Corrige los bordes redondeados para que ambos botones sean independientes */
+    .search-button {
+        border-radius: 8px;
+    }
+    
+    .reset-button {
+        border-radius: 8px;
+        margin-left: 4%; /* Espacio entre los botones */
+    }
+
+    /* Filtros: Centra y reduce el gap */
+    .filter-container {
+        gap: 8px;
+        margin-bottom: 15px;
+        justify-content: center;
+    }
+    
+    .filter-button {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    /* Resultados: Mínimo de 150px para permitir 2 columnas cómodamente */
+    .results-container {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+    
+    .movie-poster, .actor-photo {
+        height: 220px; /* Menor altura para tarjetas */
+    }
+
+    /* Modal: Ajusta el padding y el botón de cierre */
+    .modal-content {
+        margin: 20px 10px;
+        padding: 20px;
+    }
+    
+    .close-button {
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        font-size: 24px;
+    }
+    
+    /* Detalle del Modal: El póster toma todo el ancho y se centra */
+    .detail-poster {
+        flex: 0 0 100%; 
+        max-width: 250px; /* Limita el tamaño máximo del póster */
+        margin: 0 auto 20px;
+    }
+    
+    .detail-title {
+        font-size: 1.8rem;
+    }
+    
+    .detail-info-item {
+        flex-direction: column; /* Apila etiqueta y contenido */
+    }
+    
+    .detail-info-label {
+        min-width: auto;
+        margin-bottom: 2px;
+        font-size: 0.9rem;
+    }
+    
+    /* Plataformas: Una sola columna para mejor visualización */
+    .platforms-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    /* Filmografía: Máximo 2 columnas */
+    .filmography-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+    }
+    
+    .filmography-poster {
+        height: 150px;
+    }
+    
+    .actor-stats {
+        flex-direction: column; /* Apila las estadísticas */
+    }
+}
+
+/* Pantallas Medianas (Tablet portrait, 601px a 767px) */
+@media (min-width: 601px) and (max-width: 767px) {
+    /* Header: Mantiene la barra de búsqueda en una fila, pero con proporciones ajustadas */
+    .search-input {
+        flex: 3;
+    }
+    
+    /* Asegura que los botones mantengan su redondeo y estén juntos */
+    .search-button {
+        border-radius: 0; 
+    }
+    
+    .reset-button {
+        border-radius: 0 8px 8px 0;
+        margin-left: 0;
+    }
+
+    /* Resultados: Ligeramente más grandes o más columnas */
+    .results-container {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 20px;
+    }
+    
+    /* Detalle del Modal: Reduce el tamaño del póster */
+    .detail-poster {
+        flex: 0 0 250px;
+        max-width: 250px;
+        margin: 0 auto 20px;
+    }
+    
+    .platforms-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
 }

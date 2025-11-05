@@ -350,34 +350,37 @@ header {
     transform: scale(1.05);
 }
 
-/* NUEVOS estilos para el logo (imagen) */
-.platform-logo-img {
-    width: 50px; /* Igual que el div anterior */
-    height: 50px;
-    object-fit: contain; /* Asegura que el logo se vea completo dentro del círculo */
-    border-radius: 50%;
-    /* Añadimos un fondo uniforme para los logos transparentes */
-    background-color: var(--light-color); 
-    /* Borde sutil */
-    border: 1px solid var(--medium-dark-color);
-    margin: 0 auto 10px;
-    padding: 5px; /* Pequeño padding dentro del círculo */
-}
-
-/* ELIMINADO: Estilos del .platform-logo antiguo (el de las letras) */
-/* .platform-logo {
-    width: 50px;
+/* NUEVOS Estilos para el CONTENEDOR del logo (maneja el círculo y el fallback) */
+.platform-logo-container {
+    width: 50px; 
     height: 50px;
     border-radius: 50%;
+    /* Estilo del círculo de fallback */
     background: linear-gradient(135deg, var(--medium-dark-color), #4A5568);
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 10px;
+    overflow: hidden; /* Asegura que la imagen o texto queden dentro */
+}
+
+/* Estilos de la IMAGEN del logo */
+.platform-logo-img {
+    width: 100%; 
+    height: 100%;
+    object-fit: contain;
+    padding: 5px; /* Pequeño padding para que la imagen no toque los bordes */
+    /* El fondo del contenedor actúa como fondo del logo */
+    background-color: transparent; 
+}
+
+/* Estilos para el TEXTO de fallback (NE, HL, etc.) */
+.platform-logo-text {
     font-size: 14px;
     font-weight: bold;
     color: var(--light-color);
-} */
+}
+
 
 .platform-name {
     font-size: 12px;

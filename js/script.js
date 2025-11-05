@@ -24,7 +24,7 @@ let currentPage = 1;
 let totalResults = 0;
 let currentSearchQuery = '';
 let isLoading = false;
-let isInitialLoad = true; // Nuevo: Para controlar la carga inicial
+let isInitialLoad = false; // Corregido: Inicialmente falso para evitar doble carga al inicio
 
 // Placeholder para imágenes
 const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRkZGIiBmb250LWZhbWlseT0iQXJpYWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvYnI+QXZhaWxhYmxlPC90ZXh0Pgo8L3N2Zz4=';
@@ -315,14 +315,17 @@ function updateModalWithStreamingInfo(streamingData) {
                     if (type === 'rent') { typeText = 'ALQUILER'; typeClass = 'availability-rent'; }
                     if (type === 'buy') { typeText = 'COMPRA'; typeClass = 'availability-buy'; }
                     
-                    // NUEVO: URL del logo del proveedor. Usamos w92 para un tamaño optimizado.
+                    // URL del logo del proveedor. Usamos w92 para un tamaño optimizado.
                     const logoBaseUrl = 'https://image.tmdb.org/t/p/w92';
-                    const logoUrl = service.logo_path ? logoBaseUrl + service.logo_path : PLACEHOLDER_IMAGE;
+                    const logoUrl = service.logo_path ? logoBaseUrl + service.logo_path : ''; 
                     
+                    // Usamos un contenedor y el onerror para manejar el fallback al texto
                     platformsHTML += `
                         <div class="platform-item">
-                            <img src="${logoUrl}" alt="${platformName} Logo" class="platform-logo-img" 
-                                onerror="this.src='${PLACEHOLDER_IMAGE}'">
+                            <div class="platform-logo-container">
+                                <img src="${logoUrl}" alt="${platformName} Logo" class="platform-logo-img" 
+                                     onerror="this.style.display='none'; this.closest('.platform-logo-container').innerHTML = '<div class=\\'platform-logo-text\\'>${platformName.substring(0, 2).toUpperCase()}</div>';">
+                            </div>
                             <div class="platform-name">${platformName}</div>
                             <div class="platform-type">${type.toUpperCase()}</div>
                             <div class="availability-badge ${typeClass}">

@@ -79,6 +79,57 @@ header {
     margin-bottom: 20px;
 }
 
+/* NUEVOS ESTILOS PARA SUGERENCIAS */
+.input-suggestions-wrapper {
+    flex: 1; /* Permite que el wrapper tome el espacio en el flex container */
+    position: relative; /* CRUCIAL: Para posicionar el dropdown */
+}
+
+.suggestions-list {
+    position: absolute;
+    top: 100%; /* Posiciona debajo del input */
+    left: 0;
+    right: 0;
+    background-color: var(--medium-dark-color);
+    border: 1px solid var(--medium-dark-color);
+    border-top: none;
+    z-index: 500; /* Asegura que esté por encima de otros elementos */
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    display: none; /* Inicialmente oculto */
+}
+
+.suggestion-item {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--dark-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background-color: var(--dark-color);
+    color: var(--primary-color);
+}
+
+.suggestion-item-type {
+    font-size: 0.75rem;
+    color: var(--gray-color);
+    background-color: var(--dark-color);
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+/* FIN ESTILOS SUGERENCIAS */
+
 .search-input {
     flex: 1;
     padding: 12px 15px;
@@ -87,6 +138,7 @@ header {
     border-radius: 8px 0 0 8px; /* Bordes más redondeados */
     background-color: var(--medium-dark-color);
     color: var(--light-color);
+    width: 100%; /* Necesario para que ocupe todo el wrapper */
 }
 
 .search-button, .reset-button { 
@@ -615,11 +667,21 @@ header {
     .search-container {
         flex-wrap: wrap;
     }
-    
-    .search-input {
-        flex: 1 0 100%; /* Toma todo el ancho */
+
+    .input-suggestions-wrapper {
+        flex: 1 0 100%;
         margin-bottom: 10px;
+    }
+    
+    /* El input ya no tiene flex: 1 0 100% sino su wrapper */
+    .search-input {
+        /* Restablece el width: 100% que ya está definido */
         border-radius: 8px; /* Esquinas completamente redondeadas */
+    }
+
+    /* Ajuste para el dropdown en móvil */
+    .suggestions-list {
+        border-radius: 8px;
     }
     
     .search-button, .reset-button { 
@@ -720,8 +782,12 @@ header {
 /* Pantallas Medianas (Tablet portrait, 601px a 767px) */
 @media (min-width: 601px) and (max-width: 767px) {
     /* Header: Mantiene la barra de búsqueda en una fila, pero con proporciones ajustadas */
+    .search-container .input-suggestions-wrapper {
+        flex: 3; /* Le da más espacio al input */
+    }
+
     .search-input {
-        flex: 3;
+        border-radius: 8px 0 0 8px; 
     }
     
     /* Asegura que los botones mantengan su redondeo y estén juntos */

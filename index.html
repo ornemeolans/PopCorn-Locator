@@ -28,9 +28,13 @@
                 </a>
             </div>
             <div class="search-container">
-                <input type="text" class="search-input" placeholder="Buscar películas, series o actores...">
+                <div class="input-suggestions-wrapper">
+                    <input type="text" class="search-input" placeholder="Buscar películas, series o actores...">
+                    <div id="suggestions-list" class="suggestions-list"></div>
+                </div>
                 <button class="search-button">Buscar</button>
-                <button class="reset-button" id="reset-button">Resetear</button> </div>
+                <button class="reset-button" id="reset-button">Resetear</button> 
+            </div>
             <div class="filter-container">
                 <button class="filter-button active" data-type="all">Todo</button>
                 <button class="filter-button" data-type="movie">Películas</button>

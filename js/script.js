@@ -9,7 +9,7 @@ const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 // Elementos del DOM
 const searchInput = document.querySelector('.search-input');
 const searchButton = document.querySelector('.search-button');
-const resetButton = document.getElementById('reset-button'); // Nuevo
+const resetButton = document.getElementById('reset-button'); 
 const filterButtons = document.querySelectorAll('.filter-button');
 const resultsContainer = document.getElementById('results-container');
 const searchInfo = document.getElementById('search-info');
@@ -17,6 +17,8 @@ const movieModal = document.getElementById('movie-modal');
 const closeModal = document.getElementById('close-modal');
 const detailContainer = document.getElementById('detail-container');
 const paginationContainer = document.getElementById('pagination');
+// NUEVO ELEMENTO DE SUGERENCIAS
+const suggestionsList = document.getElementById('suggestions-list');
 
 // Variables de estado
 let currentSearchType = 'all';
@@ -24,18 +26,118 @@ let currentPage = 1;
 let totalResults = 0;
 let currentSearchQuery = '';
 let isLoading = false;
-let isInitialLoad = false; // Corregido: Inicialmente falso para evitar doble carga al inicio
+let isInitialLoad = false; 
 
 // Placeholder para imágenes
 const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgdmlld0JveD0iMCAwIDMwMCA0NTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDUwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRkZGIiBmb250LWZhbWlseT0iQXJpYWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0Ij5ObyBJbWFnZTwvYnI+QXZhaWxhYmxlPC90ZXh0Pgo8L3N2Zz4=';
+
+
+// ********************************************
+// * LÓGICA DE SUGERENCIAS (AUTOCOMPLETADO) *
+// ********************************************
+
+// Función de Debounce para limitar las llamadas a la API
+const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
+        timeoutId = setTimeout(() => {
+            func.apply(null, args);
+        }, delay);
+    };
+};
+
+// Manejador del evento input (usando debounce)
+function handleSearchInput() {
+    const query = searchInput.value.trim();
+    if (query.length < 3) { // Solo buscar después de 3 caracteres
+        suggestionsList.style.display = 'none';
+        suggestionsList.innerHTML = '';
+        return;
+    }
+    getSearchSuggestions(query);
+}
+
+// Obtener sugerencias de la API de TMDB
+async function getSearchSuggestions(query) {
+    // Usamos el mismo multi-search para sugerir películas y series
+    const url = `${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=1&language=es-ES`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        // Filtramos solo títulos y limitamos a un máximo de 8
+        const filteredResults = data.results
+            .filter(item => item.media_type !== 'person' && (item.title || item.name))
+            .slice(0, 8); 
+
+        displaySuggestions(filteredResults);
+
+    } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        suggestionsList.style.display = 'none';
+    }
+}
+
+// Mostrar sugerencias en el dropdown
+function displaySuggestions(results) {
+    suggestionsList.innerHTML = '';
+
+    if (results.length === 0) {
+        suggestionsList.style.display = 'none';
+        return;
+    }
+
+    results.forEach(item => {
+        const title = item.title || item.name;
+        const mediaType = item.media_type === 'movie' ? 'Película' : item.media_type === 'tv' ? 'Serie' : item.media_type;
+        
+        const suggestionItem = document.createElement('div');
+        suggestionItem.className = 'suggestion-item';
+        suggestionItem.innerHTML = `
+            <span>${title}</span>
+            <span class="suggestion-item-type">${mediaType}</span>
+        `;
+        
+        suggestionItem.addEventListener('click', () => selectSuggestion(title));
+        suggestionsList.appendChild(suggestionItem);
+    });
+
+    suggestionsList.style.display = 'block';
+}
+
+// Seleccionar una sugerencia
+function selectSuggestion(title) {
+    searchInput.value = title;
+    suggestionsList.style.display = 'none';
+    performSearch(); // Llama a la búsqueda completa
+}
+
+// Ocultar sugerencias al hacer clic fuera del input o del dropdown
+window.addEventListener('click', (e) => {
+    // Si el clic no es en el input y no es dentro de la lista de sugerencias
+    if (e.target !== searchInput && e.target.closest('.suggestions-list') === null) {
+        suggestionsList.style.display = 'none';
+    }
+});
+// ********************************************
+// * FIN LÓGICA DE SUGERENCIAS *
+// ********************************************
 
 // Event Listeners
 searchButton.addEventListener('click', performSearch);
 searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
+        suggestionsList.style.display = 'none'; // Ocultar antes de buscar
         performSearch();
     }
 });
+// NUEVO: Agregamos el listener de input con debounce
+searchInput.addEventListener('input', debounce(handleSearchInput, 300));
+
 
 filterButtons.forEach(button => {
     button.addEventListener('click', () => {
@@ -46,8 +148,8 @@ filterButtons.forEach(button => {
             currentPage = 1;
             performSearch();
         } else if (!isLoading) {
-            // Si no hay query, pero se cambia el filtro, cargamos populares de nuevo
-            // O simplemente no hacemos nada para no sobrecargar la API al cambiar filtros vacíos
+             // Si no hay query, pero se cambia el filtro, cargamos populares de nuevo
+             // O simplemente no hacemos nada para no sobrecargar la API al cambiar filtros vacíos
         }
     });
 });
@@ -56,13 +158,9 @@ closeModal.addEventListener('click', () => {
     movieModal.style.display = 'none';
 });
 
-window.addEventListener('click', (e) => {
-    if (e.target === movieModal) {
-        movieModal.style.display = 'none';
-    }
-});
 
-// NUEVO: Event Listener para el botón de reseteo
+
+// Event Listener para el botón de reseteo
 resetButton.addEventListener('click', resetSearch);
 
 // Funciones de control de estado
@@ -82,7 +180,7 @@ function loadInitialContent() {
     loadPopularContent();
 }
 
-// NUEVO: Carga de Contenido Popular
+// Carga de Contenido Popular
 async function loadPopularContent() {
     resultsContainer.innerHTML = '<div class="loading">Cargando contenido popular...</div>';
     searchInfo.innerHTML = '';
@@ -95,7 +193,7 @@ async function loadPopularContent() {
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
-            displayTMDBResults(data.results, 0, 0, 1); // Pasamos 0/0 para no mostrar paginación en populares
+            displayTMDBResults(data.results, 0, 0, 1); 
             searchInfo.innerHTML = '<p>✨ **Contenido Popular y Tendencias**</p>';
         } else {
             resultsContainer.innerHTML = '<div class="no-results">No se pudo cargar el contenido popular.</div>';

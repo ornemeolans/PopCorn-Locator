@@ -7,11 +7,11 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <header>
+    <header role="banner">
         <div class="container">
             <div class="header-content">
-                <a href="#" class="logo-link">
-                    <div class="logo-svg">
+                <a href="#" class="logo-link" aria-label="PopCorn Locator - Inicio">
+                    <div class="logo-svg" aria-hidden="true">
                         <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M7 10H33L30 35H10L7 10Z" fill="#FFC107"/> 
                             <path d="M7 10L10 35M33 10L30 35" stroke="#3182CE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/> 
@@ -27,40 +27,79 @@
                     <h1 class="logo-text">PopCorn Locator</h1>
                 </a>
             </div>
-            <div class="search-container">
+            <div class="search-container" role="search">
                 <div class="input-suggestions-wrapper">
-                    <input type="text" class="search-input" placeholder="Buscar películas, series o actores...">
-                    <div id="suggestions-list" class="suggestions-list"></div>
+                    <label for="search-input" class="visually-hidden">Buscar películas, series o actores</label>
+                    <input type="text" id="search-input" class="search-input" placeholder="Buscar películas, series o actores..." aria-describedby="search-input-desc">
+                    <span id="search-input-desc" class="visually-hidden">Escribe al menos 3 caracteres para ver sugerencias</span>
+                    <div id="suggestions-list" class="suggestions-list" role="listbox" aria-label="Sugerencias de búsqueda"></div>
                 </div>
-                <button class="search-button">Buscar</button>
-                <button class="reset-button" id="reset-button">Resetear</button> 
+                <button class="search-button" aria-label="Buscar">Buscar</button>
+                <button class="reset-button" id="reset-button" aria-label="Resetear búsqueda">Resetear</button> 
             </div>
-            <div class="filter-container">
-                <button class="filter-button active" data-type="all">Todo</button>
-                <button class="filter-button" data-type="movie">Películas</button>
-                <button class="filter-button" data-type="series">Series</button>
-                <button class="filter-button" data-type="actor">Actores</button>
+            <div class="filter-container" role="group" aria-label="Filtros de tipo de contenido">
+                <button class="filter-button active" data-type="all" role="radio" aria-checked="true">Todo</button>
+                <button class="filter-button" data-type="movie" role="radio" aria-checked="false">Películas</button>
+                <button class="filter-button" data-type="series" role="radio" aria-checked="false">Series</button>
+                <button class="filter-button" data-type="actor" role="radio" aria-checked="false">Actores</button>
+                <button class="favorites-toggle-btn" id="favorites-toggle" role="radio" aria-checked="false">❤️ Favoritos</button>
+            </div>
+            <!-- Filtros Avanzados -->
+            <div class="advanced-filters" id="advanced-filters" style="display: none;">
+                <select id="genre-filter" class="genre-select" aria-label="Filtrar por género">
+                    <option value="">Todos los géneros</option>
+                </select>
+                <select id="year-filter" class="year-select" aria-label="Filtrar por año">
+                    <option value="">Todos los años</option>
+                </select>
             </div>
         </div>
     </header>
 
-    <main class="container">
-        <div class="search-info" id="search-info">
+    <main class="container" role="main">
+        <div class="search-info" id="search-info" aria-live="polite">
             </div>
-        <div class="results-container" id="results-container">
+        <div class="results-container" id="results-container" role="region" aria-label="Resultados de búsqueda">
             </div>
-        <div class="pagination" id="pagination">
+        <div class="pagination" id="pagination" role="navigation" aria-label="Paginación de resultados">
             </div>
     </main>
 
-    <div class="modal" id="movie-modal">
+    <div class="modal" id="movie-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
         <div class="modal-content">
-            <button class="close-button" id="close-modal">&times;</button>
+            <button class="close-button" id="close-modal" aria-label="Cerrar detalles">&times;</button>
             <div class="detail-container" id="detail-container">
                 </div>
         </div>
     </div>
 
-    <script src="js/script.js"></script>
+    <!-- Templates HTML para reutilización -->
+    <template id="movie-card-template">
+        <article class="movie-card" tabindex="0" role="button" aria-label="Ver detalles">
+            <img src="" alt="" class="movie-poster" loading="lazy">
+            <div class="movie-info">
+                <h3 class="movie-title"></h3>
+                <div class="movie-year"></div>
+                <div class="movie-rating">
+                    <span class="star">★</span>
+                    <span class="rating-value"></span>
+                </div>
+            </div>
+        </article>
+    </template>
+
+    <template id="actor-card-template">
+        <article class="actor-card" tabindex="0" role="button" aria-label="Ver detalles del actor">
+            <img src="" alt="" class="actor-photo" loading="lazy">
+            <div class="actor-info">
+                <h3 class="actor-name"></h3>
+                <div class="actor-known-for"></div>
+                <div class="actor-role"></div>
+            </div>
+        </article>
+    </template>
+
+    <script src="js/app.js" type="module"></script>
 </body>
 </html>
+

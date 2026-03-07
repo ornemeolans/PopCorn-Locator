@@ -1,3 +1,6 @@
+/* Google Fonts - Poppins */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 :root {
     /* Paleta Aesthetic: Tonos Oscuros Suaves (Deep Blue Gray) y Acentos Vibrantes */
     --primary-color: #00A389; /* Teal - Acento principal e invitante */
@@ -18,8 +21,9 @@
 }
 
 body {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    background-color: var(--dark-color); /* Nuevo fondo oscuro suave */
+    font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #1F2937 0%, #111827 50%, #0F172A 100%);
+    background-attachment: fixed;
     color: var(--light-color);
     line-height: 1.6;
 }
@@ -31,12 +35,14 @@ body {
 }
 
 header {
-    background-color: rgba(31, 41, 55, 0.95); /* Fondo de cabecera con opacidad */
+    background: rgba(31, 41, 55, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     padding: 20px 0;
     position: sticky;
     top: 0;
     z-index: 100;
-    border-bottom: 1px solid var(--medium-dark-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* --- Estilos para el Logo de PopCorn Locator --- */
@@ -76,6 +82,7 @@ header {
 
 .search-container {
     display: flex;
+    align-items: center;
     margin-bottom: 20px;
 }
 
@@ -135,19 +142,33 @@ header {
     padding: 12px 15px;
     font-size: 16px;
     border: 1px solid var(--medium-dark-color);
-    border-radius: 8px 0 0 8px; /* Bordes más redondeados */
+    border-radius: 8px 0 0 8px;
     background-color: var(--medium-dark-color);
     color: var(--light-color);
-    width: 100%; /* Necesario para que ocupe todo el wrapper */
+    width: 100%;
+    line-height: 20px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    box-sizing: border-box;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 163, 137, 0.2);
 }
 
 .search-button, .reset-button { 
-    padding: 12px 20px;
+    padding: 12px 15px;
     color: white;
     border: none;
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.3s ease, transform 0.1s;
+    line-height: 20px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .search-button {
@@ -276,19 +297,38 @@ header {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     z-index: 1000;
     overflow-y: auto;
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+}
+
+.modal.show {
+    display: block;
+    opacity: 1;
 }
 
 .modal-content {
-    background-color: var(--medium-dark-color);
+    background: rgba(45, 55, 72, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     margin: 50px auto;
     padding: 30px;
     border-radius: 12px;
     max-width: 900px;
     position: relative;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+    transform: translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.modal.show .modal-content {
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .close-button {
@@ -527,6 +567,63 @@ header {
     color: var(--primary-color);
 }
 
+/* Skeleton Screens - Animación de carga elegante */
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.skeleton-card {
+    background-color: var(--medium-dark-color);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-poster {
+    width: 100%;
+    height: 300px;
+    background: linear-gradient(90deg, var(--medium-dark-color) 25%, #3d4a5d 50%, var(--medium-dark-color) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+.skeleton-info {
+    padding: 15px;
+}
+
+.skeleton-title {
+    height: 20px;
+    width: 80%;
+    background: linear-gradient(90deg, var(--dark-color) 25%, #3d4a5d 50%, var(--dark-color) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.skeleton-year {
+    height: 14px;
+    width: 50%;
+    background: linear-gradient(90deg, var(--dark-color) 25%, #3d4a5d 50%, var(--dark-color) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Error con ilustración y botón reintentar */
 .error {
     text-align: center;
     padding: 40px;
@@ -534,6 +631,40 @@ header {
     background-color: var(--medium-dark-color);
     border-radius: 8px;
     margin: 20px 0;
+}
+
+.error-illustration {
+    margin-bottom: 20px;
+}
+
+.error-illustration svg {
+    width: 80px;
+    height: 80px;
+    fill: var(--secondary-color);
+    opacity: 0.7;
+}
+
+.error-message {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    color: var(--light-color);
+}
+
+.retry-button {
+    padding: 12px 24px;
+    background-color: var(--primary-color);
+    color: var(--dark-color);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.retry-button:hover {
+    background-color: #007A65;
+    transform: translateY(-2px);
 }
 
 .no-results {
@@ -638,9 +769,92 @@ header {
     color: var(--light-color);
 }
 
+/* Estilos de Favoritos */
+.favorite-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    z-index: 10;
+}
+
+.favorite-btn:hover {
+    transform: scale(1.1);
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.movie-card {
+    position: relative;
+}
+
+/* Filtros Avanzados (Género/Año) */
+.advanced-filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.genre-select,
+.year-select {
+    padding: 8px 12px;
+    background-color: var(--medium-dark-color);
+    color: var(--light-color);
+    border: 1px solid var(--dark-color);
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.genre-select:focus,
+.year-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 163, 137, 0.2);
+}
+
+.genre-select option,
+.year-select option {
+    background-color: var(--medium-dark-color);
+    color: var(--light-color);
+}
+
+/* Botón de Favoritos en Header */
+.favorites-toggle-btn {
+    padding: 8px 16px;
+    background-color: var(--secondary-color);
+    color: var(--light-color);
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    margin-left: auto;
+}
+
+.favorites-toggle-btn:hover {
+    background-color: #5B3C84;
+}
+
+.favorites-toggle-btn.active {
+    background-color: #e91e63;
+}
+
 /* ************************************************* */
 /* * MEDIA QUERIES DE RESPONSIVENESS     * */
-/* ************************************************* */
+/* ************************************
 
 /* Pantallas Pequeñas (Mobile, max 600px) */
 @media (max-width: 600px) {

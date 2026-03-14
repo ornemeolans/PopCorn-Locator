@@ -16,6 +16,20 @@ El proyecto destaca por la implementación de lógica asíncrona y el manejo de 
 - **Fetch API**: Consumo de APIs externas para obtener datos de películas y proveedores en tiempo real.
 - **Arquitectura Modular**: Separación de responsabilidades entre la interfaz, la configuración y el manejo de datos.
 
+## ⚙️ Instalación y Ejecución Local
+
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/ornemeolans/popcorn-locator.git
+2. **Navegar al directorio:**
+   ```bash
+   cd popcorn-locator
+3. **Configuración de API:**
+  Asegúrate de configurar tus credenciales en el archivo js/config.js si es necesario para el acceso a la base de datos de películas.
+4. **Ejecución:**
+  Obligatorio: Al utilizar módulos de JavaScript (type="module"), el navegador bloquea la ejecución si se abre el archivo directamente.
+  Debes usar un servidor local (ej. Live Server o `npx serve`).
+
 ## 📂 Estructura del Proyecto
 ```text
 /
